@@ -56,6 +56,13 @@ def parse_html(html, source_file):
     if not genres:
         warnings.append("No genres extracted; do not overwrite existing genres.")
 
+    tags_node = soup.select_one("#showtags")
+    tags = (
+        unique(text(node) for node in tags_node.select("a.genre"))
+        if tags_node is not None
+        else None
+    )
+
     associated = soup.select_one("#editassociated")
     if associated:
         for br in associated.find_all("br"):
@@ -106,6 +113,7 @@ def parse_html(html, source_file):
         "authors": unique(text(node) for node in soup.select("#showauthors a")),
         "original_language": language,
         "genres": genres,
+        "tags": tags,
         "synopsis": synopsis,
         "novelupdates_rating_count": votes,
         "novelupdates_reading_list_count": reading_count,
