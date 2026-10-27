@@ -1,12 +1,18 @@
 import argparse
 import json
 import unicodedata
+from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 
+RULES_VERSION = "scope-v1"
+
+
 def normalize(value):
-    value = unicodedata.normalize("NFKC", value)
-    return " ".join(value.casefold().split())
+    return " ".join(
+        unicodedata.normalize("NFKC", value).casefold().split()
+    )
 
 
 def terms(*values):
@@ -22,26 +28,35 @@ CULTIVATION_TAGS = terms(
     "Heavenly Tribulation",
 )
 
-# require both a relevant setting and progression/combat evidence.
-SETTING_TAGS = terms(
-    "Battle Academy",
-    "Dungeons",
-    "Hunters",
-    "Tower Climbing",
-    "Sword And Magic",
-    "Fantasy World",
+SYSTEM_SETTINGS = terms(
+    "Dungeons", "Hunters", "Tower Climbing", "Battle Academy",
 )
 
-MECHANIC_TAGS = terms(
+PROGRESSION = terms(
     "Level System",
     "Skill Assimilation",
     "Skill Books",
     "Game Ranking System",
     "Weak to Strong",
-    "Strategic Battles",
+)
+
+ACADEMIES = terms("Academy", "Battle Academy")
+
+FANTASY_WORLD = terms(
+    "Fantasy World",
+    "Sword And Magic",
+    "Magic",
+    "Elemental Magic",
+    "Magic Beasts",
+    "Magic Formations",
+    "Dragons",
+    "Mythical Beasts",
+    "Necromancer",
+    "Spirit Users",
 )
 
 FANTASY_GENRES = terms("Fantasy", "Supernatural")
+ADVENTURE_GENRES = terms("Action", "Adventure")
 
 
 def matching(values, expected):
@@ -54,10 +69,21 @@ def matching(values, expected):
 def classify(record):
     language = record.get("original_language")
 
+    if language is None:
+        return "defer", "missing_language", [
+            "Original language is unavailable."
+        ]
+
     if language not in {"zh", "ko"}:
-        if language is None:
-            return "review", ["Original language unavailable."]
-        return "exclude", ["Original language is outside Chinese/Korean scope."]
+        return "exclude", "language", [
+            "Original language is outside Chinese/Korean scope."
+        ]
+
+    if record.get("warnings"):
+        return "defer", "source_warnings", [
+            "Resolve source parsing warnings before automatic inclusion.",
+            *record["warnings"],
+        ]
 
     genres = record.get("genres") or []
     tags = record.get("tags") or []
@@ -67,73 +93,153 @@ def classify(record):
         + matching(tags, CULTIVATION_TAGS)
     )
     if cultivation:
-        return "include", [
+        return "include", "cultivation_world", [
             "Cultivation or martial-world evidence: "
             + ", ".join(cultivation)
         ]
 
-    settings = matching(tags, SETTING_TAGS)
-    mechanics = matching(tags, MECHANIC_TAGS)
     fantasy = matching(genres, FANTASY_GENRES)
+    adventure = matching(genres, ADVENTURE_GENRES)
+    settings = matching(tags, SYSTEM_SETTINGS)
+    progression = matching(tags, PROGRESSION)
+    academies = matching(tags, ACADEMIES)
+    world = matching(tags, FANTASY_WORLD)
 
-    if fantasy and settings and mechanics:
-        return "include", [
-            "Fantasy setting: " + ", ".join(settings),
-            "Progression or combat evidence: " + ", ".join(mechanics),
+    if fantasy and settings and progression:
+        return "include", "fantasy_system", [
+            "Fantasy genres: " + ", ".join(fantasy),
+            "Setting evidence: " + ", ".join(settings),
+            "Progression evidence: " + ", ".join(progression),
+        ]
+
+    if fantasy and academies and len(world) >= 2:
+        return "include", "fantasy_academy", [
+            "Academy evidence: " + ", ".join(academies),
+            "Fantasy-world evidence: " + ", ".join(world),
+        ]
+
+    if fantasy and adventure and len(world) >= 2:
+        return "include", "fantasy_adventure", [
+            "Adventure genres: " + ", ".join(adventure),
+            "Fantasy-world evidence: " + ", ".join(world),
         ]
 
     reasons = [
-        "Needs synopsis review: metadata does not establish a strong scope match."
+        "Insufficient evidence for automatic thematic inclusion.",
+        "Deferred novels remain outside playable pools; no review is required.",
     ]
     if not tags:
         reasons.append("Tags are missing or empty.")
     if settings:
         reasons.append("Possible setting evidence: " + ", ".join(settings))
-    if mechanics:
-        reasons.append("Possible progression evidence: " + ", ".join(mechanics))
+    if progression:
+        reasons.append(
+            "Possible progression evidence: " + ", ".join(progression)
+        )
+    if world:
+        reasons.append("Possible fantasy evidence: " + ", ".join(world))
 
-    return "review", reasons
+    return "defer", "insufficient_evidence", reasons
+
+
+def validate_records(records):
+    if not isinstance(records, list):
+        raise ValueError("Input must be a JSON list of detail records.")
+
+    seen_urls = set()
+
+    for record in records:
+        if not isinstance(record, dict):
+            raise ValueError("Every record must be an object.")
+
+        for field in ("source_title", "novelupdates_url"):
+            value = record.get(field)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"Each record needs a nonempty {field}.")
+
+        url = record["novelupdates_url"]
+        if url in seen_urls:
+            raise ValueError(f"Duplicate novelupdates_url: {url}")
+        seen_urls.add(url)
+
+        language = record.get("original_language")
+        if language is not None and not isinstance(language, str):
+            raise ValueError("original_language must be a string or null.")
+
+        for field in ("genres", "tags"):
+            if field not in record:
+                raise ValueError(
+                    "Use the detail preview with tags, not a candidate list."
+                )
+            value = record[field]
+            if value is not None and (
+                not isinstance(value, list)
+                or any(not isinstance(item, str) for item in value)
+            ):
+                raise ValueError(f"{field} must be a string list or null.")
+
+        warnings = record.get("warnings", [])
+        if not isinstance(warnings, list) or any(
+            not isinstance(item, str) for item in warnings
+        ):
+            raise ValueError("warnings must be a list of strings.")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
     try:
+        if args.input.resolve() == args.output.resolve():
+            raise ValueError("Input and output must be different files.")
+        if args.output.exists() and not args.overwrite:
+            raise ValueError("Output exists; use --overwrite to replace it.")
+
         records = json.loads(args.input.read_text(encoding="utf-8-sig"))
-        if not isinstance(records, list):
-            raise ValueError("Input must be a JSON list of novel detail records.")
+        validate_records(records)
 
-        # Validate the entire input before printing decisions.
-        for record in records:
-            if not isinstance(record, dict) or not record.get("source_title"):
-                raise ValueError("Each record must contain a source_title.")
-            if "genres" not in record or "tags" not in record:
-                raise ValueError(
-                    "Use the detail preview with tags, not the candidate list."
-                )
-            for field in ("genres", "tags"):
-                value = record[field]
-                if value is not None and (
-                    not isinstance(value, list)
-                    or any(not isinstance(item, str) for item in value)
-                ):
-                    raise ValueError(f"{field} must be a list of strings or null.")
-
-        counts = {"include": 0, "review": 0, "exclude": 0}
+        results = []
+        counts = Counter({"include": 0, "defer": 0, "exclude": 0})
 
         for record in records:
-            status, reasons = classify(record)
-            counts[status] += 1
-            print(f"\n[{status.upper()}] {record['source_title']}")
-            for reason in reasons:
+            decision, rule, reasons = classify(record)
+            counts[decision] += 1
+            results.append({
+                "decision": decision,
+                "rule": rule,
+                "reasons": reasons,
+                "record": record,
+            })
+
+        report = {
+            "report_type": "novel_scope_preview",
+            "rules_version": RULES_VERSION,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "summary": dict(counts),
+            "results": results,
+        }
+
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        with args.output.open(
+            "w" if args.overwrite else "x", encoding="utf-8"
+        ) as file:
+            json.dump(report, file, ensure_ascii=False, indent=2)
+            file.write("\n")
+
+        for result in results:
+            title = result["record"]["source_title"]
+            print(f"\n[{result['decision'].upper()}] {title}")
+            for reason in result["reasons"]:
                 print(f"  {reason}")
 
         print("\nSummary: " + ", ".join(
             f"{status}={count}" for status, count in counts.items()
         ))
-        print("Scope preview only. No database changes were made.")
+        print(f"Saved scope report to {args.output}")
+        print("No database changes were made.")
 
     except (OSError, ValueError) as error:
         parser.exit(1, f"Error: {error}\n")
