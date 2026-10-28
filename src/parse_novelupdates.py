@@ -46,7 +46,7 @@ def parse_html(html, source_file):
         )
 
     warnings = []
-    # Generic schema.org inLanguage says English in these files. Use the original-language field displayed in the series sidebar instead.
+    # generic schema.org inLanguage says English in these files. Use the original-language field displayed in the series sidebar instead.
     language_label = text(soup.select_one("#showlang"))
     language = LANGUAGES.get(language_label.casefold())
     if language is None:
@@ -98,6 +98,25 @@ def parse_html(html, source_file):
     else:
         warnings.append("Rating count unavailable; retained as null, not zero.")
 
+    # read the explicitly displayed 0–5 NovelUpdates rating.
+    rating_text = text(soup.select_one(".uvotes"))
+    rating_match = re.search(
+        r"\(\s*(\d+(?:\.\d+)?)\s*/\s*5(?:\.0+)?\s*,",
+        rating_text,
+    )
+
+    average_rating = (
+        float(rating_match.group(1)) if rating_match else None
+    )
+    if average_rating is not None and not 0 <= average_rating <= 5:
+        average_rating = None
+
+    # preserve line boundaries and wording. Do not sum chapter numbers.
+    status_node = soup.select_one("#editstatus")
+    chapter_status = (
+        status_node.get_text("\n", strip=True) if status_node else None
+    ) or None
+
     reading_node = soup.select_one(".rlist")
     reading_count = integer_count(text(reading_node)) if text(reading_node) else None
     if reading_count is None:
@@ -117,6 +136,8 @@ def parse_html(html, source_file):
         "synopsis": synopsis,
         "novelupdates_rating_count": votes,
         "novelupdates_reading_list_count": reading_count,
+        "novelupdates_rating_raw": average_rating,
+        "original_chapter_status_raw": chapter_status,
         "warnings": warnings,
     }
 
