@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-RULES_VERSION = "scope-v2"
+RULES_VERSION = "scope-v3"
 
 
 def normalize(value):
@@ -89,6 +89,16 @@ def classify(record):
     if language not in {"zh", "ko"}:
         return "exclude", "language", [
             "Original language is outside Chinese/Korean scope."
+        ]
+
+    fanfiction = matching(
+        record.get("tags") or [],
+        terms("Fanfiction", "Fan Fiction", "Fan-fiction"),
+    )
+    if fanfiction:
+        return "exclude", "fanfiction", [
+            "Fanfiction is excluded from normal and hard pools.",
+            "Source tags: " + ", ".join(fanfiction),
         ]
 
     if record.get("warnings"):
