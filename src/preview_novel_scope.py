@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-RULES_VERSION = "scope-v1"
+RULES_VERSION = "scope-v2"
 
 
 def normalize(value):
@@ -58,6 +58,18 @@ FANTASY_WORLD = terms(
 FANTASY_GENRES = terms("Fantasy", "Supernatural")
 ADVENTURE_GENRES = terms("Action", "Adventure")
 
+CULTIVATION_SUPPORT = terms(
+    "Dao Comprehension",
+    "Pill Based Cultivation",
+    "Multiple Realms",
+    "Immortals",
+    "Magic Formations",
+    "Spirit Stones",
+    "Sect Development",
+)
+
+VIRTUAL_WORLD = terms("MMORPG", "Virtual Reality")
+
 
 def matching(values, expected):
     return sorted(
@@ -88,14 +100,23 @@ def classify(record):
     genres = record.get("genres") or []
     tags = record.get("tags") or []
 
-    cultivation = (
-        matching(genres, CULTIVATION_GENRES)
-        + matching(tags, CULTIVATION_TAGS)
-    )
-    if cultivation:
+    cultivation_genres = matching(genres, CULTIVATION_GENRES)
+    cultivation_tags = matching(tags, CULTIVATION_TAGS)
+    cultivation_support = matching(tags, CULTIVATION_SUPPORT)
+
+    if cultivation_genres:
+        return "include", "cultivation_genre", [
+            "Cultivation or martial-world genres: "
+            + ", ".join(cultivation_genres)
+        ]
+
+    if cultivation_tags and (
+        cultivation_support or len(cultivation_tags) >= 2
+    ):
         return "include", "cultivation_world", [
-            "Cultivation or martial-world evidence: "
-            + ", ".join(cultivation)
+            "Cultivation evidence: " + ", ".join(cultivation_tags),
+            "Supporting evidence: "
+            + ", ".join(cultivation_support or cultivation_tags),
         ]
 
     fantasy = matching(genres, FANTASY_GENRES)
@@ -104,6 +125,14 @@ def classify(record):
     progression = matching(tags, PROGRESSION)
     academies = matching(tags, ACADEMIES)
     world = matching(tags, FANTASY_WORLD)
+    virtual_world = matching(tags, VIRTUAL_WORLD)
+
+    if fantasy and adventure and virtual_world and progression:
+        return "include", "virtual_world_progression", [
+            "Fantasy/adventure genres: " + ", ".join(fantasy + adventure),
+            "Virtual-world evidence: " + ", ".join(virtual_world),
+            "Progression evidence: " + ", ".join(progression),
+        ]
 
     if fantasy and settings and progression:
         return "include", "fantasy_system", [
