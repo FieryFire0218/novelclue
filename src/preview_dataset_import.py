@@ -18,6 +18,27 @@ def validate_config(config):
     for field in ("min_reading_lists", "min_rating_votes"):
         if config["normal"][field] < config["broad"][field]:
             raise ValueError("Normal must be at least as strict as broad.")
+        
+    pairs = config.get("verified_distinct_pairs", [])
+    if not isinstance(pairs, list):
+        raise ValueError("verified_distinct_pairs must be a list.")
+
+    for pair in pairs:
+        if not isinstance(pair, dict):
+            raise ValueError("Each verified pair must be an object.")
+
+        ids = pair.get("source_ids")
+        if (
+            not isinstance(ids, list)
+            or len(ids) != 2
+            or any(type(value) is not int or value <= 0 for value in ids)
+            or ids[0] == ids[1]
+        ):
+            raise ValueError("Each verified pair needs two distinct positive IDs.")
+
+        reason = pair.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError("Each verified pair needs a reason.")
 
 
 def qualifies(record, requirements):
@@ -64,6 +85,11 @@ def title_keys(record):
 
 
 def build_preview(scope, config, novels):
+    verified_distinct = {
+        frozenset(pair["source_ids"]): pair["reason"]
+        for pair in config.get("verified_distinct_pairs", [])
+    }
+
     database_titles = defaultdict(set)
     database_by_id = {}
 
@@ -99,6 +125,20 @@ def build_preview(scope, config, novels):
             source_collisions.update(source_titles[key] - {source_id})
 
         notes = []
+
+        for other_id in sorted(source_collisions):
+            pair = frozenset((source_id, other_id))
+            if pair in verified_distinct:
+                notes.append(
+                    f"Verified distinct from source ID {other_id}: "
+                    + verified_distinct[pair]
+                )
+
+        source_collisions = {
+            other_id for other_id in source_collisions
+            if frozenset((source_id, other_id)) not in verified_distinct
+        }
+
         status = "new_candidate"
         target = None
 

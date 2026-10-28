@@ -43,6 +43,7 @@ Thumbs.db
 # Project specific
 *.csv
 *.json
+!config/novel_pools.json
 data/
 logs/
 temp/
