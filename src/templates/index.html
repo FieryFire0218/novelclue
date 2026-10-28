@@ -64,12 +64,23 @@
       statusEl.className = "status-message";
     }
 
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;",
+        '"': "&quot;", "'": "&#39;"
+      }[char]));
+    }
+
+    function displayValue(value) {
+      return value == null || String(value).trim() === "" ? "Unknown" : escapeHtml(value);
+    }
+
     function renderResultCard(title, bodyHtml, tone = "neutral") {
       resultsDiv.insertAdjacentHTML(
         "afterbegin",
         `
           <article class="result-card ${tone}">
-            <h3>${title}</h3>
+            <h3>${escapeHtml(title)}</h3>
             <div>${bodyHtml}</div>
           </article>
         `
@@ -77,18 +88,11 @@
     }
 
     function renderStars(v) {
-      if (v == null) return "";
-      const num = Number(v);
-      if (!isFinite(num)) return "";
-
-      let r5 = num;
-      if (num > 10) r5 = num / 20;
-      else if (num > 5) r5 = num / 2;
-      r5 = Math.max(0, Math.min(5, Math.round(r5 * 2) / 2));
-
+      if (v == null || !Number.isFinite(Number(v))) return "Unknown";
+      const r5 = Math.max(0, Math.min(5, Math.round(Number(v) * 2) / 2));
       const full = Math.floor(r5);
-      const half = (r5 - full) >= 0.5 ? 1 : 0;
-      return "★".repeat(full) + (half ? "½" : "");
+      const half = (r5 - full) >= 0.5;
+      return "★".repeat(full) + (half ? "½" : "") || "0 stars";
     }
 
     function lockGame() {
@@ -136,8 +140,8 @@
         });
         const data = await res.json();
 
-        if (data.error) {
-          setStatus(data.error, "error");
+        if (!res.ok || data.error) {
+          setStatus(data.error || "Could not check your guess.", "error");
           inputEl.value = "";
           inputEl.focus();
           return;
@@ -146,7 +150,7 @@
         if (data.title === "🎉 Correct!") {
           renderResultCard(
             "Correct guess",
-            `<p><strong>${title}</strong> was the novel of the day.</p>`,
+            `<p><strong>${escapeHtml(title)}</strong> was the novel of the day.</p>`,
             "success"
           );
           setStatus("You got it!", "success");
@@ -156,15 +160,14 @@
           const genres = data.genres;
           renderResultCard(
             `Guess: ${title}`,
-            `<p><strong>Author:</strong> ${data.author}</p>
-             <p><strong>Translator:</strong> ${data.translator}</p>
+            `<p><strong>Author:</strong> ${escapeHtml(data.author)}</p>
             <p><strong>Genres:</strong> ${
               genres.available
-                ? `${genres.summary} · Matched: ${genres.matched.join(", ") || "none"}`
-                : genres.summary
+                ? `${escapeHtml(genres.summary)} · Matched: ${escapeHtml(genres.matched.join(", ") || "none")}`
+                : escapeHtml(genres.summary)
             }</p>
-             <p><strong>Rating:</strong> ${data.rating.summary}</p>
-             <p><strong>Chapters:</strong> ${data.chapters}</p>`,
+             <p><strong>NovelUpdates rating:</strong> ${escapeHtml(data.rating.summary)}</p>
+             <p><strong>Original chapters:</strong> ${escapeHtml(data.chapters)}</p>`,
             "neutral"
           );
           setStatus("Try another title.", "info");
@@ -186,19 +189,22 @@
       try {
         const res = await fetch("/answer");
         const ans = await res.json();
+        if (!res.ok || ans.error) {
+          setStatus(ans.error || "Could not load the answer.", "error");
+          return;
+        }
 
         renderResultCard(
           "Answer",
-          `<p><strong>Title:</strong> ${ans.title}</p>
-           <p><strong>Author:</strong> ${ans.author}</p>
-           <p><strong>Translator:</strong> ${ans.translator}</p>
+          `<p><strong>Title:</strong> ${displayValue(ans.title)}</p>
+           <p><strong>Author:</strong> ${displayValue(ans.author)}</p>
           <p><strong>Genres:</strong> ${
-            (ans.genres || [])
-              .filter(g => !["chinese", "korean"].includes(g.trim().toLowerCase()))
-              .join(", ") || "Genre data unavailable"
+            escapeHtml((ans.genres || [])
+              .filter(g => typeof g === "string" && !["chinese", "korean"].includes(g.trim().toLowerCase()))
+              .join(", ") || "Genre data unavailable")
           }</p>
-           <p><strong>Rating:</strong> ${renderStars(ans.rating5 ?? ans.rating)}</p>
-           <p><strong>Chapters:</strong> ${ans.chapters}</p>`,
+           <p><strong>NovelUpdates rating:</strong> ${renderStars(ans.rating5)}</p>
+           <p><strong>Original chapters:</strong> ${displayValue(ans.chapters)}</p>`,
           "warning"
         );
 

@@ -9,10 +9,18 @@ from models import Novel, DailyAnswer
 from compare import (
     compare_guess,
     _normalize_rating_5,
-    _round_to_half
+    _round_to_half,
+    _text_key
 )
 
+from novel_metadata import snapshot_data
+
 app = Flask(__name__)
+
+def game_data(novel):
+    from novel_metadata import game_data as build_game_data
+    return build_game_data(novel)
+
 
 def get_novels():
     with SessionLocal() as session:
@@ -20,7 +28,7 @@ def get_novels():
             select(Novel).order_by(Novel.id)
         ).all()
 
-        return [novel.to_dict() for novel in novels]
+        return [game_data(novel) for novel in novels]
 
 
 def get_daily_answer():
@@ -31,7 +39,7 @@ def get_daily_answer():
         saved_answer = session.get(DailyAnswer, today)
 
         if saved_answer is not None:
-            return saved_answer.answer_data
+            return snapshot_data(saved_answer.answer_data)
 
         # retrieve stable database IDs in a defined order
         novel_ids = session.scalars(
@@ -52,7 +60,7 @@ def get_daily_answer():
         statement = pg_insert(DailyAnswer).values(
             day=today,
             novel_id=selected_id,
-            answer_data=selected_novel.to_dict(),
+            answer_data=game_data(selected_novel),
         )
 
         # prevent duplicate entries if two requests arrive simultaneously
@@ -64,7 +72,7 @@ def get_daily_answer():
 
         saved_answer = session.get(DailyAnswer, today)
 
-        return saved_answer.answer_data
+        return snapshot_data(saved_answer.answer_data)
 
 @app.route("/")
 def index():
@@ -92,7 +100,7 @@ def guess():
     guess_novel = next(
         (
             novel for novel in novels
-            if novel["title"].lower() == guess_title.lower()
+            if _text_key(novel["title"]) == _text_key(guess_title)
         ),
         None
     )
@@ -113,7 +121,6 @@ def guess():
 
 @app.route("/answer")
 def get_answer():
-    novels = get_novels()
 
     answer = get_daily_answer()
 
@@ -138,7 +145,6 @@ def get_answer():
     return jsonify({
         "title": answer["title"],
         "author": answer["author"],
-        "translator": answer["translator"],
         "genres": answer["genres"],
         "rating": answer["rating"],
         "rating5": r5,
