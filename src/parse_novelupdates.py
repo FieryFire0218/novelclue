@@ -7,6 +7,9 @@ from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 
+from chapter_status import parse_chapter_status
+from page_provenance import content_hash, fetch_time, read_cache
+
 
 LANGUAGES = {"chinese": "zh", "korean": "ko", "japanese": "ja"}
 
@@ -26,7 +29,8 @@ def integer_count(value):
     return int(value.replace(",", ""))
 
 
-def parse_html(html, source_file):
+def parse_html(html, source_file, fetched_at=None):
+    observed = fetch_time(fetched_at)
     soup = BeautifulSoup(html, "html.parser")
     title = text(soup.select_one(".seriestitlenu"))
     canonical = soup.select_one('link[rel="canonical"]')
@@ -124,6 +128,10 @@ def parse_html(html, source_file):
 
     return {
         "source": "novelupdates",
+        "parser_revision": 2,
+        "html_sha256": content_hash(html),
+        "fetched_at": observed.isoformat() if observed else None,
+        "freshness": "known" if observed else "unknown",
         "source_file": Path(source_file).name,
         "parsed_at": datetime.now(timezone.utc).isoformat(),
         "novelupdates_url": url,
@@ -138,6 +146,7 @@ def parse_html(html, source_file):
         "novelupdates_reading_list_count": reading_count,
         "novelupdates_rating_raw": average_rating,
         "original_chapter_status_raw": chapter_status,
+        **parse_chapter_status(chapter_status),
         "warnings": warnings,
     }
 
@@ -169,7 +178,13 @@ def main():
 
         # Parse the entire batch before writing output. Errors leave the
         # previous preview intact. No database imports or network requests.
-        records = [parse_html(p.read_bytes(), p.name) for p in paths]
+        records = []
+        for p in paths:
+            html, fetched_at, observed_url = read_cache(p)
+            record = parse_html(html, p.name, fetched_at=fetched_at)
+            if observed_url and observed_url.rstrip("/") != record["novelupdates_url"].rstrip("/"):
+                raise ValueError(f"Cache URL mismatch: {p}")
+            records.append(record)
         urls = [record["novelupdates_url"] for record in records]
         if len(urls) != len(set(urls)):
             raise ValueError("Duplicate series URLs in inputs; provide one copy per series.")
@@ -184,7 +199,9 @@ def main():
                 f"{record['source_title']} | {record['original_language']} | "
                 f"{len(record['genres'])} genres | "
                 f"{record['novelupdates_rating_count']} ratings | "
-                f"{record['novelupdates_reading_list_count']} reading lists"
+                f"{record['novelupdates_reading_list_count']} reading lists | "
+                f"chapters={record['original_chapters_total']} | "
+                f"status={record['publication_status']} | freshness={record['freshness']}"
             )
             for warning in record["warnings"]:
                 print(f"  WARNING: {warning}")

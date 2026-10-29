@@ -148,7 +148,12 @@ def get_answer():
         "genres": answer["genres"],
         "rating": answer["rating"],
         "rating5": r5,
-        "chapters": answer["chapters"]
+        "chapters": answer.get("chapters"),
+        "original_chapters_total": answer.get("original_chapters_total"),
+        "original_chapters_main": answer.get("original_chapters_main"),
+        "original_chapters_extra": answer.get("original_chapters_extra"),
+        "publication_status": answer.get("publication_status", "unknown"),
+        "main_publication_status": answer.get("main_publication_status", "unknown")
     })
 
 

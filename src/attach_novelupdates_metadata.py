@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from compare import _text_key
+from page_provenance import choose_page, observation_time
 
 
 def url_key(value):
@@ -20,16 +21,6 @@ def url_key(value):
     return "https://www.novelupdates.com" + p.path.rstrip("/") + "/"
 
 
-def timestamp(record):
-    value = record.get("parsed_at")
-    if not isinstance(value, str):
-        raise ValueError("Page record has no parsed_at timestamp.")
-    result = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    if result.tzinfo is None:
-        raise ValueError("Page timestamps must include a timezone.")
-    return result
-
-
 def load_pages(paths):
     pages = {}
     for path in paths:
@@ -40,9 +31,11 @@ def load_pages(paths):
             key = url_key(record.get("novelupdates_url"))
             if not key or record.get("source") != "novelupdates" or record.get("warnings"):
                 raise ValueError("Invalid or warned detail record; resolve before attaching.")
-            date = timestamp(record)
-            if key not in pages or date > timestamp(pages[key]):
-                pages[key] = record
+            observation_time(record)
+            selected, reason = choose_page(pages.get(key), record)
+            if key in pages and reason.endswith("held"):
+                print(f"[PAGE HELD] {record.get('source_title')}: {reason}")
+            pages[key] = selected
     return pages
 
 
@@ -92,8 +85,8 @@ def plan_updates(preview, novels, pages):
             raise ValueError(f"Database title changed since preview: {current.title}")
         if current.original_language and current.original_language != record["original_language"]:
             raise ValueError(f"Language conflict: {current.title}")
-        # existing retained records are never replaced by this historical snapshot.
-        # a newer page record is stored separately for field-level precedence.
+        # Existing retained records are never replaced by this historical snapshot.
+        # A newer page record is stored separately for field-level precedence.
         metadata.setdefault("record", record)
         metadata.setdefault("source_novel_id", source_id)
         metadata.setdefault("source_provenance", preview["source_provenance"])
@@ -110,8 +103,10 @@ def plan_updates(preview, novels, pages):
             if page.get("original_language") != record["original_language"]:
                 raise ValueError(f"Page language conflict: {current.title}")
             previous = metadata.get("novelupdates_page")
-            if previous is None or timestamp(page) > timestamp(previous):
-                metadata["novelupdates_page"] = page
+            selected, reason = choose_page(previous, page)
+            if reason.endswith("held"):
+                print(f"[PAGE HELD] {current.title}: {reason}")
+            metadata["novelupdates_page"] = selected
         changed = metadata != (current.source_metadata or {})
         if changed:
             metadata["metadata_attached_at"] = datetime.now(timezone.utc).isoformat()

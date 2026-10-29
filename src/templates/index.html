@@ -95,6 +95,25 @@
       return "★".repeat(full) + (half ? "½" : "") || "0 stars";
     }
 
+    function formatChapters(answer) {
+      const total = answer.original_chapters_total;
+      const main = answer.original_chapters_main;
+      const extra = answer.original_chapters_extra;
+      const parts = [];
+      if (main != null) parts.push(`${displayValue(main)} main`);
+      if (extra != null) parts.push(`${displayValue(extra)} extras`);
+      const count = total == null ? "Total unknown" : `${displayValue(total)} chapters`;
+      return count + (parts.length ? ` · ${parts.join(" + ")}` : "");
+    }
+
+    function formatPublication(answer) {
+      const labels = {completed: "Completed", ongoing: "Ongoing", hiatus: "Hiatus",
+        dropped: "Dropped", cancelled: "Cancelled", unknown: "Unknown"};
+      const overall = labels[answer.publication_status] || "Unknown";
+      const main = labels[answer.main_publication_status] || "Unknown";
+      return overall + (main !== "Unknown" && main !== overall ? ` · Main story: ${main}` : "");
+    }
+
     function lockGame() {
       inputEl.disabled = true;
       guessBtn.disabled = true;
@@ -167,6 +186,7 @@
                 : escapeHtml(genres.summary)
             }</p>
              <p><strong>NovelUpdates rating:</strong> ${escapeHtml(data.rating.summary)}</p>
+             <p><strong>Publication status:</strong> ${escapeHtml(data.publication_status)}</p>
              <p><strong>Original chapters:</strong> ${escapeHtml(data.chapters)}</p>`,
             "neutral"
           );
@@ -204,7 +224,8 @@
               .join(", ") || "Genre data unavailable")
           }</p>
            <p><strong>NovelUpdates rating:</strong> ${renderStars(ans.rating5)}</p>
-           <p><strong>Original chapters:</strong> ${displayValue(ans.chapters)}</p>`,
+           <p><strong>Publication status:</strong> ${formatPublication(ans)}</p>
+           <p><strong>Original chapters:</strong> ${formatChapters(ans)}</p>`,
           "warning"
         );
 

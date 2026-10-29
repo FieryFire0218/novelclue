@@ -1,18 +1,11 @@
-import re
 from compare import _normalize_rating_5, _genre_map
+from chapter_status import parse_chapter_status
 
-GAME_VERSION = "novelupdates-v1"
+GAME_VERSION = "novelupdates-v2"
 
 
 def original_chapters(value):
-    # only a simple, explicitly labelled total is safe to parse. Do not sum volumes, side stories, ranges, or open-ended descriptions.
-    if not isinstance(value, str):
-        return None
-    match = re.fullmatch(r"\s*(\d+|\d{1,3}(?:,\d{3})+)\s+chapters?\s*", value, re.I)
-    if not match:
-        return None
-    count = int(match.group(1).replace(",", ""))
-    return count if count <= 2147483647 else None
+    return parse_chapter_status(value)["original_chapters_total"]
 
 
 def nonempty_strings(value):
@@ -35,12 +28,14 @@ def game_data(novel):
         return nonempty_strings(page.get(field)) or nonempty_strings(dataset.get(field))
 
     rating = None
-    chapters = None
     for record in (page, dataset):
         if rating is None:
             rating = _normalize_rating_5(record.get("novelupdates_rating_raw"))
-        if chapters is None:
-            chapters = original_chapters(record.get("original_chapter_status_raw"))
+
+    # the latest retained status text is one coherent observation. If its total is ambiguous, do not silently substitute an older dataset count/status.
+    page_raw = page.get("original_chapter_status_raw")
+    raw = page_raw if isinstance(page_raw, str) and page_raw.strip() else dataset.get("original_chapter_status_raw")
+    chapter_info = parse_chapter_status(raw)
 
     authors = first_list("authors")
     genres = list(_genre_map(first_list("genres")).values())
@@ -48,6 +43,7 @@ def game_data(novel):
         genres = list(_genre_map(novel.genres).values())
     return {
         "game_metadata_version": GAME_VERSION,
+        # keep the established title/URL so identity and autocomplete stay stable.
         "title": novel.title,
         "url": novel.novelupdates_url or novel.url,
         "author": authors[0] if authors else novel.author,
@@ -55,15 +51,20 @@ def game_data(novel):
         "author_identity_unverified": bool(authors),
         "genres": genres,
         "rating": rating,
-        "chapters": chapters,
+        "chapters": chapter_info["original_chapters_total"],
+        **chapter_info,
     }
 
 
 def snapshot_data(snapshot):
     data = dict(snapshot)
     data.pop("translator", None)
-    if data.get("game_metadata_version") != GAME_VERSION:
-        # legacy snapshots contain WW percentages and translated chapter totals. Preserve their answer identity, but never relabel those measurements.
-        data["rating"] = None
+    version = data.get("game_metadata_version")
+    if version != GAME_VERSION:
+        # v1 ratings are already NU scores. Older snapshots use WW percentages.
+        if version != "novelupdates-v1":
+            data["rating"] = None
+        # do not compare a pre-breakdown count with the new total semantics.
         data["chapters"] = None
+        data.update(parse_chapter_status(None))
     return data

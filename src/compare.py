@@ -91,6 +91,13 @@ def compare_guess(guess, answer):
             "higher_or_lower": direction,
         }
 
+    statuses = {"completed", "ongoing", "hiatus", "dropped", "cancelled"}
+    g_status, a_status = guess.get("publication_status"), answer.get("publication_status")
+    result["publication_status"] = (
+        "Publication status unknown" if g_status not in statuses or a_status not in statuses
+        else "✔️" if g_status == a_status else "❌"
+    )
+
     g_chapters, a_chapters = guess.get("chapters"), answer.get("chapters")
     if any(type(value) is not int or value < 0 for value in (g_chapters, a_chapters)):
         result["chapters"] = "Original chapter count unknown"

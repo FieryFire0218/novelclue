@@ -5,9 +5,12 @@ import os
 from pathlib import Path
 import tempfile
 import time
+from datetime import datetime, timezone
+
+from page_provenance import read_cache, write_cache
 
 from parse_novelupdates import parse_html
-from preview_novelupdates_import import normalize_url
+from page_provenance import normalize_series_url as normalize_url
 
 
 def load_urls(path):
@@ -29,8 +32,8 @@ def cache_path(directory, url):
     return directory / (hashlib.sha256(url.encode("utf-8")).hexdigest() + ".html")
 
 
-def validate_page(html, url, filename):
-    record = parse_html(html, filename)
+def validate_page(html, url, filename, fetched_at=None):
+    record = parse_html(html, filename, fetched_at=fetched_at)
     if normalize_url(record["novelupdates_url"]) != url:
         raise ValueError("Page canonical URL differs from the requested series.")
     if record["warnings"]:
@@ -63,7 +66,10 @@ def collect(urls, cache, browser, refresh=False):
         for url in urls:
             path = cache_path(cache, url)
             if path.exists() and not refresh:
-                record = validate_page(path.read_bytes(), url, path.name)
+                html, fetched_at, observed_url = read_cache(path)
+                if observed_url and normalize_url(observed_url) != url:
+                    raise ValueError("Cache URL metadata differs from requested URL.")
+                record = validate_page(html, url, path.name, fetched_at=fetched_at)
                 records.append(record)
                 print(f"CACHED: {record['source_title']}", flush=True)
                 continue
@@ -107,7 +113,8 @@ def collect(urls, cache, browser, refresh=False):
                     ),
                 )
                 html = driver.page_source
-                record = validate_page(html, url, path.name)
+                fetched_at = datetime.now(timezone.utc).isoformat()
+                record = validate_page(html, url, path.name, fetched_at=fetched_at)
             except (TimeoutException, WebDriverException, ValueError) as error:
                 try:
                     page_title = driver.title
@@ -127,7 +134,7 @@ def collect(urls, cache, browser, refresh=False):
                     "Previously validated pages remain cached."
                 ) from error
 
-            atomic_write(path, html)
+            write_cache(path, html, url, fetched_at)
             records.append(record)
             print(f"SAVED: {record['source_title']}", flush=True)
     finally:
