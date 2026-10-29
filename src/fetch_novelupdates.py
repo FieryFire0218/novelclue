@@ -2,6 +2,9 @@ import argparse
 import hashlib
 import json
 import os
+import re
+
+from bs4 import BeautifulSoup
 from pathlib import Path
 import tempfile
 import time
@@ -41,6 +44,38 @@ def validate_page(html, url, filename, fetched_at=None):
     return record
 
 
+def validate_id_page(html, source_id, filename, fetched_at=None):
+    """Require the page's own ID; a successful redirect alone is not identity."""
+    soup = BeautifulSoup(html, "html.parser")
+    nodes = soup.select("input#mypostid")
+    if len(nodes) != 1:
+        raise ValueError("Expected exactly one page source-ID marker.")
+    value = nodes[0].get("value", "")
+    if not re.fullmatch(r"[1-9]\d*", value) or int(value) != source_id:
+        raise ValueError("Page source ID differs from requested source ID.")
+    canonicals = soup.select('link[rel="canonical"]')
+    if len(canonicals) != 1:
+        raise ValueError("Expected exactly one canonical series URL.")
+    canonical = normalize_url(canonicals[0].get("href"))
+    record = validate_page(html, canonical, filename, fetched_at)
+    record["source_novel_id"] = source_id
+    return record
+
+
+def validate_target(html, target, filename, fetched_at=None):
+    if type(target) is int:
+        return validate_id_page(html, target, filename, fetched_at)
+    return validate_page(html, target, filename, fetched_at)
+
+
+def lookup_url(target):
+    if type(target) is int:
+        if target <= 0:
+            raise ValueError("Source IDs must be positive integers.")
+        return f"https://www.novelupdates.com/?p={target}"
+    return normalize_url(target)
+
+
 def atomic_write(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
@@ -63,13 +98,14 @@ def collect(urls, cache, browser, refresh=False):
     records = []
     requested = False
     try:
-        for url in urls:
+        for target in urls:
+            url = lookup_url(target)
             path = cache_path(cache, url)
             if path.exists() and not refresh:
                 html, fetched_at, observed_url = read_cache(path)
-                if observed_url and normalize_url(observed_url) != url:
-                    raise ValueError("Cache URL metadata differs from requested URL.")
-                record = validate_page(html, url, path.name, fetched_at=fetched_at)
+                record = validate_target(html, target, path.name, fetched_at=fetched_at)
+                if observed_url and normalize_url(observed_url) != record["novelupdates_url"]:
+                    raise ValueError("Cache URL metadata differs from validated page URL.")
                 records.append(record)
                 print(f"CACHED: {record['source_title']}", flush=True)
                 continue
@@ -114,7 +150,7 @@ def collect(urls, cache, browser, refresh=False):
                 )
                 html = driver.page_source
                 fetched_at = datetime.now(timezone.utc).isoformat()
-                record = validate_page(html, url, path.name, fetched_at=fetched_at)
+                record = validate_target(html, target, path.name, fetched_at=fetched_at)
             except (TimeoutException, WebDriverException, ValueError) as error:
                 try:
                     page_title = driver.title
@@ -134,7 +170,7 @@ def collect(urls, cache, browser, refresh=False):
                     "Previously validated pages remain cached."
                 ) from error
 
-            write_cache(path, html, url, fetched_at)
+            write_cache(path, html, record["novelupdates_url"], fetched_at)
             records.append(record)
             print(f"SAVED: {record['source_title']}", flush=True)
     finally:
@@ -148,7 +184,9 @@ def collect(urls, cache, browser, refresh=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", type=Path)
+    parser.add_argument("input", type=Path, nargs="?", help="Existing URL-list JSON input")
+    parser.add_argument("--ids", nargs="+", type=int,
+                        help="Small ID lookup test (1–5 unique positive IDs); no input JSON")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--cache", type=Path, default=Path("data/nu_cache"))
     parser.add_argument("--browser", choices=("firefox", "chrome"), default="firefox")
@@ -156,11 +194,18 @@ def main():
     parser.add_argument("--overwrite", action="store_true", help="Replace an existing output JSON")
     args = parser.parse_args()
     try:
-        if args.input.resolve() == args.output.resolve():
+        if (args.input is None) == (args.ids is None):
+            raise ValueError("Provide either an input JSON file or --ids, not both.")
+        if args.ids is not None and (
+            len(args.ids) > 5 or any(i <= 0 for i in args.ids)
+            or len(set(args.ids)) != len(args.ids)
+        ):
+            raise ValueError("ID test requires 1–5 unique positive IDs.")
+        if args.input is not None and args.input.resolve() == args.output.resolve():
             raise ValueError("Use different input and output files.")
         if args.output.exists() and not args.overwrite:
             raise ValueError("Output exists; use --overwrite to replace it.")
-        urls = load_urls(args.input)
+        urls = args.ids if args.ids is not None else load_urls(args.input)
         records = collect(urls, args.cache, args.browser, args.refresh)
         atomic_write(args.output, json.dumps(records, ensure_ascii=False, indent=2) + "\n")
         print(f"Saved {len(records)} records to {args.output}")
