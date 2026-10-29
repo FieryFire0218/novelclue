@@ -52,6 +52,26 @@ def _author_keys(novel):
     return {key for value in values if (key := _text_key(value))}
 
 
+def _author_values(novel):
+    aliases = novel.get("author_aliases")
+    values = [novel.get("author")] + (aliases if isinstance(aliases, list) else [])
+    return list(dict.fromkeys(v.strip() for v in values if isinstance(v, str) and v.strip()))
+
+
+def _latin_name(value):
+    letters = [c for c in value if c.isalpha()]
+    return bool(letters) and all("LATIN" in unicodedata.name(c, "") for c in letters)
+
+
+def _matched_author_name(guess, shared):
+    # prefer a shared Latin-script name. If matching happened through a native alias, use a Latin alias already present on the guess, not an answer-only name.
+    values = _author_values(guess)
+    common = [v for v in values if _text_key(v) in shared]
+    return next((v for v in common if _latin_name(v)), None) or next(
+        (v for v in values if _latin_name(v)), None
+    ) or common[0]
+
+
 def compare_guess(guess, answer):
     title = _text_key(guess.get("title"))
     if title and title == _text_key(answer.get("title")):
@@ -62,11 +82,9 @@ def compare_guess(guess, answer):
     if not guess_authors or not answer_authors:
         result["author"] = "Author unknown"
     elif guess_authors & answer_authors:
-        result["author"] = "✔️"
-    elif guess.get("author_identity_unverified") or answer.get("author_identity_unverified"):
-        result["author"] = "Author comparison unavailable"
+        result["author"] = "✔️ Same author — " + _matched_author_name(guess, guess_authors & answer_authors)
     else:
-        result["author"] = "❌"
+        result["author"] = "❌ Different author"
 
     g_genres, a_genres = _genre_map(guess.get("genres")), _genre_map(answer.get("genres"))
     if not g_genres or not a_genres:
@@ -93,10 +111,15 @@ def compare_guess(guess, answer):
 
     statuses = {"completed", "ongoing", "hiatus", "dropped", "cancelled"}
     g_status, a_status = guess.get("publication_status"), answer.get("publication_status")
-    result["publication_status"] = (
-        "Publication status unknown" if g_status not in statuses or a_status not in statuses
-        else "✔️" if g_status == a_status else "❌"
-    )
+    if g_status not in statuses:
+        status_feedback = "Your guess: Unknown · Comparison unavailable—guess status unknown"
+    elif a_status not in statuses:
+        status_feedback = f"Your guess: {g_status.capitalize()} · Comparison unavailable—answer status unknown"
+    else:
+        match = "✔️ Same status" if g_status == a_status else "❌ Different status"
+        status_feedback = f"Your guess: {g_status.capitalize()} · {match}"
+    result["publication_status"] = status_feedback
+
 
     g_chapters, a_chapters = guess.get("chapters"), answer.get("chapters")
     if any(type(value) is not int or value < 0 for value in (g_chapters, a_chapters)):

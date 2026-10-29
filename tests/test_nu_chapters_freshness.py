@@ -182,9 +182,9 @@ class GameTests(unittest.TestCase):
     def test_status_feedback_and_snapshots(self):
         base={'title':'Example','author':'A','genres':['Fantasy'],'rating':4,'chapters':100,'publication_status':'completed'}
         other=dict(base,title='Other',publication_status='ongoing')
-        self.assertEqual(compare_guess(base,other)['publication_status'],'❌')
-        self.assertEqual(compare_guess(base,dict(other,publication_status='completed'))['publication_status'],'✔️')
-        self.assertEqual(compare_guess(base,dict(other,publication_status='unknown'))['publication_status'],'Publication status unknown')
+        self.assertEqual(compare_guess(base,other)['publication_status'],'Your guess: Completed · ❌ Different status')
+        self.assertEqual(compare_guess(base,dict(other,publication_status='completed'))['publication_status'],'Your guess: Completed · ✔️ Same status')
+        self.assertEqual(compare_guess(base,dict(other,publication_status='unknown'))['publication_status'],'Your guess: Completed · Comparison unavailable—answer status unknown')
         old=snapshot_data(dict(base,game_metadata_version='novelupdates-v1'))
         self.assertEqual(old['rating'],4)
         self.assertIsNone(old['chapters'])
