@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import re
+import math
 
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -88,12 +89,18 @@ def atomic_write(path, content):
             os.unlink(temporary)
 
 
-def collect(urls, cache, browser, refresh=False):
+def collect(urls, cache, browser, refresh=False, *, firefox_profile=None, delay=5, on_record=None):
     from selenium import webdriver
     from selenium.common.exceptions import TimeoutException, WebDriverException
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
 
+    if not math.isfinite(delay) or delay < 5:
+        raise ValueError("Delay must be a finite number of at least 5 seconds.")
+    if firefox_profile is not None:
+        firefox_profile = Path(firefox_profile).expanduser().resolve()
+        if browser != "firefox" or not firefox_profile.is_dir():
+            raise ValueError("Firefox profile must be an existing directory used with Firefox.")
     driver = None
     records = []
     requested = False
@@ -107,6 +114,8 @@ def collect(urls, cache, browser, refresh=False):
                 if observed_url and normalize_url(observed_url) != record["novelupdates_url"]:
                     raise ValueError("Cache URL metadata differs from validated page URL.")
                 records.append(record)
+                if on_record:
+                    on_record(target, record)
                 print(f"CACHED: {record['source_title']}", flush=True)
                 continue
 
@@ -114,6 +123,8 @@ def collect(urls, cache, browser, refresh=False):
                 if browser == "firefox":
                     options = webdriver.FirefoxOptions()
                     options.page_load_strategy = "eager"
+                    if firefox_profile is not None:
+                        options.profile = str(firefox_profile)
                     driver = webdriver.Firefox(options=options)
                 else:
                     options = webdriver.ChromeOptions()
@@ -122,7 +133,7 @@ def collect(urls, cache, browser, refresh=False):
                 driver.set_page_load_timeout(45)
 
             if requested:
-                time.sleep(5)  
+                time.sleep(delay)  
             requested = True
             print(f"FETCHING: {url}", flush=True)
             try:
@@ -172,6 +183,8 @@ def collect(urls, cache, browser, refresh=False):
 
             write_cache(path, html, record["novelupdates_url"], fetched_at)
             records.append(record)
+            if on_record:
+                on_record(target, record)
             print(f"SAVED: {record['source_title']}", flush=True)
     finally:
         if driver is not None:
@@ -190,6 +203,8 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--cache", type=Path, default=Path("data/nu_cache"))
     parser.add_argument("--browser", choices=("firefox", "chrome"), default="firefox")
+    parser.add_argument("--firefox-profile", type=Path)
+    parser.add_argument("--delay", type=float, default=5)
     parser.add_argument("--refresh", action="store_true", help="Fetch again instead of using cached pages")
     parser.add_argument("--overwrite", action="store_true", help="Replace an existing output JSON")
     args = parser.parse_args()
@@ -206,7 +221,8 @@ def main():
         if args.output.exists() and not args.overwrite:
             raise ValueError("Output exists; use --overwrite to replace it.")
         urls = args.ids if args.ids is not None else load_urls(args.input)
-        records = collect(urls, args.cache, args.browser, args.refresh)
+        records = collect(urls, args.cache, args.browser, args.refresh,
+                          firefox_profile=args.firefox_profile, delay=args.delay)
         atomic_write(args.output, json.dumps(records, ensure_ascii=False, indent=2) + "\n")
         print(f"Saved {len(records)} records to {args.output}")
         print("No database changes were made.")
