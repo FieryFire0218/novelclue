@@ -127,3 +127,12 @@ class DailyAnswer(Base):
         nullable=False,
     )
 
+
+
+class LanguageDailyAnswer(Base):
+    __tablename__ = "language_daily_answers"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    language: Mapped[str] = mapped_column(String(2), primary_key=True)
+    novel_id: Mapped[int] = mapped_column(ForeignKey("novels.id", ondelete="RESTRICT"), nullable=False)
+    answer_data: Mapped[dict] = mapped_column(JSONB, nullable=False)

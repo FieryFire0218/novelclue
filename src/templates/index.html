@@ -12,7 +12,7 @@
       <div class="brand">
         <div class="brand-mark">📚</div>
         <div>
-          <p class="eyebrow">Daily web novel challenge</p>
+          <p class="eyebrow">Web novel guessing game</p>
           <h1>NovelClue</h1>
         </div>
       </div>
@@ -20,9 +20,23 @@
     </header>
 
     <section class="panel">
-      <p class="subtitle">Guess today's web novel.</p>
+      <form method="get" action="{{ url_for('index') }}" class="actions">
+        <label>Language <select name="language">{% for code, label in languages.items() %}<option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label>Game <select name="difficulty"><option value="normal" {% if difficulty == 'normal' %}selected{% endif %}>Daily (normal)</option><option value="hard" {% if difficulty == 'hard' %}selected{% endif %}>Hard challenge</option></select></label>
+        <button class="secondary-btn">Play</button>
+      </form>
+      {% if difficulty == 'normal' %}
+      <p class="subtitle">{{ languages[lang] }} daily puzzle · {{ day.isoformat() }} UTC</p>
+      <form method="get" class="actions">
+        <input type="hidden" name="language" value="{{ lang }}">
+        <label>Saved puzzles <select name="day">{% for d in dates %}<option {% if d == day %}selected{% endif %}>{{ d.isoformat() }}</option>{% endfor %}</select></label>
+        <button class="secondary-btn">Open</button>
+      </form>
+      {% else %}
+      <p class="subtitle">{{ languages[lang] }} hard challenge · <a href="{{ url_for('index', language=lang, difficulty='hard', previous=params['round']) }}">New round</a></p>
+      {% endif %}
 
-      <form id="guessForm" class="guess-form" autocomplete="off">
+      <form action="{{ url_for('guess', **params) }}" method="post" id="guessForm" class="guess-form" autocomplete="off">
         <label class="sr-only" for="guessInput">Novel title</label>
         <input type="text" id="guessInput" placeholder="Enter novel title..." list="novelOptions" aria-label="Novel title">
         <datalist id="novelOptions">
@@ -34,7 +48,7 @@
       </form>
 
       <div class="actions">
-        <button id="giveUpBtn" class="danger-btn" type="button">Give up</button>
+        <button data-answer-url="{{ url_for('get_answer', **params) }}" id="giveUpBtn" class="danger-btn" type="button">Give up</button>
       </div>
 
       <div id="statusMessage" class="status-message" aria-live="polite"></div>
@@ -50,6 +64,19 @@
     const guessBtn = document.getElementById("guessBtn");
     const giveUpBtn = document.getElementById("giveUpBtn");
     const resetBtn = document.getElementById("resetBtn");
+
+    function gameUrl(path) {
+      const url = new URL(path, window.location.origin);
+      const query = new URLSearchParams(window.location.search);
+      for (const key of ["language", "difficulty", "round", "day"]) {
+        if (query.has(key)) url.searchParams.set(key, query.get(key));
+      }
+      const savedDay = document.querySelector('select[name="day"] option[selected]');
+      if (savedDay && !url.searchParams.has("day")) {
+        url.searchParams.set("day", savedDay.value);
+      }
+      return url;
+    }
 
     let hasGivenUp = false;
     let hasWon = false;
@@ -152,7 +179,7 @@
       }
 
       try {
-        const res = await fetch("/guess", {
+        const res = await fetch(gameUrl("/guess"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title })
@@ -169,7 +196,7 @@
         if (data.title === "🎉 Correct!") {
           renderResultCard(
             "Correct guess",
-            `<p><strong>${escapeHtml(title)}</strong> was the novel of the day.</p>`,
+            `<p><strong>${escapeHtml(title)}</strong> was the answer.</p>`,
             "success"
           );
           setStatus("You got it!", "success");
@@ -207,7 +234,7 @@
       }
 
       try {
-        const res = await fetch("/answer");
+        const res = await fetch(gameUrl("/answer"));
         const ans = await res.json();
         if (!res.ok || ans.error) {
           setStatus(ans.error || "Could not load the answer.", "error");
