@@ -33,3 +33,23 @@ const Core = {
   }
 };
 if (typeof module !== 'undefined') module.exports = Core;
+
+// New exports are also restartable checkpoints; old exports lack a queue.
+Core.restore = function(data) {
+  if(data?.report_type !== 'novelclue_browser_capture')return {queue:Core.queue(data),records:[]};
+  if(data.version!==1 || !Array.isArray(data.queue) || !Array.isArray(data.records))
+    throw new Error('This capture has no resumable queue. Load a new queue instead.');
+  const queue=Core.queue(data.queue.map(r=>r.id));
+  queue.forEach((r,i)=>r.title=typeof data.queue[i].title==='string'?data.queue[i].title:r.title);
+  const ids=new Set(queue.map(r=>r.id)),seen=new Set();
+  let bytes=0;
+  for(const record of data.records){
+    if(!ids.has(record.source_novel_id)||seen.has(record.source_novel_id))throw new Error('Invalid checkpoint ID or duplicate record.');
+    if(record.capture_format!=='novelclue_metadata_fragment_v1'||!Number.isFinite(Date.parse(record.captured_at)))
+      throw new Error('Invalid checkpoint capture metadata.');
+    Core.check({...record,kind:'page'},record.source_novel_id);
+    bytes+=record.html.length;if(bytes>200000000)throw new Error('Checkpoint exceeds 200 MB.');
+    seen.add(record.source_novel_id);
+  }
+  return {queue,records:data.records,delay:Number.isInteger(data.delay)&&data.delay>=1&&data.delay<=60?data.delay:2};
+};

@@ -1,10 +1,11 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><title>NovelClue Collector</title>
 <link rel="stylesheet" href="popup.css">
 <h1>NovelClue Collector</h1>
-<p>Five-page test · 15 seconds between pages</p><p>Choose a queue below. It is loaded when the queued count updates; the filename may disappear if this tab is reopened.</p>
-<label>Readiness audit or ID-list JSON<input id="file" type="file" accept=".json,application/json"></label>
+<p>Continuous queue · progress saved after each novel</p><p>Choose a queue below. It is loaded when the queued count updates; the filename may disappear if this tab is reopened.</p>
+<label>Queue or exported checkpoint JSON<input id="file" type="file" accept=".json,application/json"></label>
+<label>Seconds between novels (1–60)<input id="delay" type="number" min="1" max="60" step="1" value="2"></label>
 <div class="buttons"><button id="start">Start / Resume</button><button id="pause">Pause</button></div>
 <p id="counts"></p><p id="status" role="status"></p><p id="error" role="alert"></p>
-<div class="buttons"><button id="export">Export pages</button><button id="clear">Clear queue</button></div>
-<p class="note">Verification pauses collection. Complete it yourself if possible; Resume only rechecks the current page. Keep the collector tab open.</p>
+<div class="buttons"><button id="export">Export pages / checkpoint</button><button id="clear">Clear queue</button></div>
+<p class="note">Automatic verification is given time to finish. Collection pauses if the page remains unavailable; Resume rechecks the same page. Keep the collection tab open. Export before restarting Firefox; temporary extensions may lose their local data.</p>
 <script src="popup.js"></script></html>

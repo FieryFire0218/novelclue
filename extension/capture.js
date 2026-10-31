@@ -3,6 +3,7 @@
   const title = document.title.toLowerCase();
   if (['just a moment','access denied','attention required','verify you are human','security verification']
       .some(t => title.includes(t))) return {kind:'blocked', reason:'Verification detected. Complete it manually if possible, then click Resume.'};
+  if (document.readyState === 'loading') return {kind:'waiting'};
   const ids = document.querySelectorAll('input#mypostid');
   const canon = document.querySelectorAll('link[rel="canonical"]');
   const name = document.querySelector('.seriestitlenu');
