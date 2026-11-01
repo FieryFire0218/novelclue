@@ -12,6 +12,8 @@ from database import SessionLocal
 from models import DailyAnswer, LanguageDailyAnswer, Novel
 from novel_metadata import game_data, snapshot_data
 
+from story_hints import story_hints
+
 app = Flask(__name__)
 
 
@@ -51,10 +53,14 @@ def daily(session, lang, day):
         # rotate through a stable shuffle so adjacent database IDs do not dominate a week.
         ids.sort(key=lambda n: sha256(f"daily/{lang}/{n}".encode()).digest())
         novel = session.get(Novel, ids[day.toordinal() % len(ids)])
-        statement = pg_insert(model).values(**key, novel_id=novel.id, answer_data=game_data(novel))
+        snapshot = dict(game_data(novel), hints=story_hints(novel))
+        statement = pg_insert(model).values(**key, novel_id=novel.id, answer_data=snapshot)
         session.execute(statement.on_conflict_do_nothing(index_elements=list(key)))
         saved = session.get(model, key)
-    return snapshot_data(saved.answer_data)
+    answer = snapshot_data(saved.answer_data)
+    if "hints" not in answer:
+        answer["hints"] = story_hints(session.get(Novel, saved.novel_id))
+    return answer
 
 
 def round_key(lang, novel_id):
@@ -67,7 +73,8 @@ def answer_for(session, lang, difficulty, day):
     token = request.args.get("round")
     for novel_id in session.scalars(pool_ids(lang, "hard")):
         if round_key(lang, novel_id) == token:
-            return game_data(session.get(Novel, novel_id))
+            novel = session.get(Novel, novel_id)
+            return dict(game_data(novel), hints=story_hints(novel))
     abort(404, "This hard round is unavailable. Start a new round.")
 
 
@@ -82,7 +89,7 @@ def title_list(lang):
 @app.errorhandler(404)
 @app.errorhandler(503)
 def game_error(error):
-    if request.path in ("/guess", "/answer"):
+    if request.path in ("/guess", "/answer", "/hint"):
         return jsonify(error=error.description), error.code
     return render_template("puzzle_error.html", message=error.description), error.code
 
@@ -126,6 +133,12 @@ def guess():
             abort(400, "Novel not found in this language.")
         answer = answer_for(session, lang, difficulty, day)
         return jsonify(compare_guess(game_data(session.get(Novel, nid)), answer))
+
+
+@app.get("/hint")
+def get_hint():
+    with SessionLocal.begin() as session:
+        return jsonify(hints=answer_for(session, *options())["hints"])
 
 
 @app.get("/answer")
