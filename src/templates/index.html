@@ -116,6 +116,81 @@
       );
     }
 
+    function renderGuess(title, data) {
+      let table = resultsDiv.querySelector(".guess-table");
+
+      if (!table) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "guess-table-scroll";
+        wrapper.tabIndex = 0;
+        wrapper.setAttribute("role", "region");
+        wrapper.setAttribute("aria-label", "Guess comparisons");
+
+        wrapper.innerHTML = `
+          <table class="guess-table">
+            <caption class="sr-only">
+              Your guesses and comparison clues
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Novel</th>
+                <th scope="col">Author</th>
+                <th scope="col">Genres</th>
+                <th scope="col">Rating</th>
+                <th scope="col">Status</th>
+                <th scope="col">Chapters</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        `;
+
+        resultsDiv.appendChild(wrapper);
+        table = wrapper.querySelector("table");
+      }
+
+      const genres = data.genres;
+      const genreText = genres.available
+        ? genres.summary + " · " +
+          (genres.matched.join(", ") || "No shared genres")
+        : genres.summary;
+
+      const values = [
+        title,
+        data.author,
+        genreText,
+        data.rating.summary,
+        data.publication_status,
+        data.chapters
+      ];
+
+      const row = document.createElement("tr");
+
+      values.forEach((value, index) => {
+        const cell = document.createElement(index === 0 ? "th" : "td");
+
+        if (index === 0) {
+          cell.scope = "row";
+        }
+
+        cell.textContent = value ?? "Unknown";
+
+        if (index > 0) {
+          const text = String(value ?? "").toLowerCase();
+
+          if (/unknown|unavailable/.test(text)) {
+            cell.className = "clue-unknown";
+          } else if (text.includes("✔")) {
+            cell.className = "clue-match";
+          }
+        }
+
+        row.appendChild(cell);
+      });
+
+      table.tBodies[0].prepend(row);
+    }
+
     function renderStars(v) {
       if (v == null || !Number.isFinite(Number(v))) return "Unknown";
       const r5 = Math.max(0, Math.min(5, Math.round(Number(v) * 2) / 2));
@@ -243,20 +318,7 @@
           hasWon = true;
           lockGame();
         } else {
-          const genres = data.genres;
-          renderResultCard(
-            `Guess: ${title}`,
-            `<p><strong>Author:</strong> ${escapeHtml(data.author)}</p>
-            <p><strong>Genres:</strong> ${
-              genres.available
-                ? `${escapeHtml(genres.summary)} · Matched: ${escapeHtml(genres.matched.join(", ") || "none")}`
-                : escapeHtml(genres.summary)
-            }</p>
-             <p><strong>NovelUpdates rating:</strong> ${escapeHtml(data.rating.summary)}</p>
-             <p><strong>Publication status:</strong> ${escapeHtml(data.publication_status)}</p>
-             <p><strong>Original chapters:</strong> ${escapeHtml(data.chapters)}</p>`,
-            "neutral"
-          );
+          renderGuess(title, data);
           setStatus("Try another title.", "info");
         }
 
