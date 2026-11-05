@@ -1,0 +1,279 @@
+{
+  "report_type": "novel_readiness_audit",
+  "results": [
+    {
+      "source_novel_id": 17281,
+      "source_title": "The Novel’s Extra",
+      "original_language": "ko",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 22145,
+      "rating_votes": 2449,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 13034,
+      "source_title": "The Reader and Protagonist Definitely Have to Be in True Love",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 21842,
+      "rating_votes": 2392,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 791,
+      "source_title": "Tales of Demons and Gods",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 21055,
+      "rating_votes": 2510,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 4036,
+      "source_title": "The Legendary Master’s Wife",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 20392,
+      "rating_votes": 1892,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 15,
+      "source_title": "I Shall Seal the Heavens",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": 138,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [
+        "publication_status"
+      ],
+      "reading_lists": 20032,
+      "rating_votes": 3188,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 20290,
+      "source_title": "Solo Leveling",
+      "original_language": "ko",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 19648,
+      "rating_votes": 1672,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 14190,
+      "source_title": "Overgeared",
+      "original_language": "ko",
+      "normal_candidate": true,
+      "database_novel_id": 122,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [
+        "publication_status"
+      ],
+      "reading_lists": 19583,
+      "rating_votes": 1712,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 195,
+      "source_title": "The Desolate Era",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 19232,
+      "rating_votes": 2053,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 8784,
+      "source_title": "The Tutorial Is Too Hard",
+      "original_language": "ko",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 18823,
+      "rating_votes": 958,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 13411,
+      "source_title": "Every Day the Protagonist Wants to Capture Me",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 18591,
+      "rating_votes": 941,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 6363,
+      "source_title": "Emperor’s Domination",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": 161,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [
+        "publication_status"
+      ],
+      "reading_lists": 18190,
+      "rating_votes": 2099,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 2072,
+      "source_title": "Martial World",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": 170,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [
+        "publication_status"
+      ],
+      "reading_lists": 17887,
+      "rating_votes": 1816,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 17042,
+      "source_title": "Lord of the Mysteries",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 17691,
+      "rating_votes": 2114,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 9274,
+      "source_title": "Transmigrating into a Mob Character to Rehabilitate the Villain Plan",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 17377,
+      "rating_votes": 1297,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 22368,
+      "source_title": "The S-Classes That I Raised",
+      "original_language": "ko",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 17184,
+      "rating_votes": 712,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 7050,
+      "source_title": "Seoul Station’s Necromancer",
+      "original_language": "ko",
+      "normal_candidate": true,
+      "database_novel_id": 61,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [
+        "publication_status"
+      ],
+      "reading_lists": 17073,
+      "rating_votes": 1528,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 6775,
+      "source_title": "I am the Monarch",
+      "original_language": "ko",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 17059,
+      "rating_votes": 1138,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 5844,
+      "source_title": "A Will Eternal",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": 123,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [
+        "publication_status"
+      ],
+      "reading_lists": 16998,
+      "rating_votes": 2035,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 14123,
+      "source_title": "Thousand Autumns",
+      "original_language": "zh",
+      "normal_candidate": true,
+      "database_novel_id": null,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [],
+      "reading_lists": 16984,
+      "rating_votes": 1005,
+      "page_fetched_at": null
+    },
+    {
+      "source_novel_id": 11868,
+      "source_title": "The Book Eating Magician",
+      "original_language": "ko",
+      "normal_candidate": true,
+      "database_novel_id": 165,
+      "novelupdates_url": null,
+      "next_action": "resolve_url",
+      "missing_game_fields": [
+        "publication_status"
+      ],
+      "reading_lists": 16508,
+      "rating_votes": 1074,
+      "page_fetched_at": null
+    }
+  ]
+}
