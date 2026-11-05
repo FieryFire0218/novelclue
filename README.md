@@ -1,5 +1,7 @@
 # NovelClue
 
+[Play NovelClue](https://novelclue.onrender.com/)
+
 A web novel guessing game built with Flask and PostgreSQL, using
 NovelUpdates metadata.
 
@@ -7,6 +9,28 @@ Choose Chinese, Korean, or mixed mode. Normal mode provides a daily
 puzzle with saved archives; hard mode provides additional random rounds
 from a broader novel pool. Guesses receive comparison feedback, and
 optional hints use collected genres, tags, and synopsis excerpts.
+
+## Screenshots
+![NovelClue showing novel guesses, comparison feedback, and hints](docs/images/novelclue.png)
+
+## Features
+
+- Chinese, Korean, and mixed-language modes
+- Daily puzzles with saved puzzle archives
+- Randomized hard-mode rounds from a broader novel pool
+- Guess feedback comparing authors, genres, ratings, publication status,
+  and chapter counts
+- Optional hints generated from collected metadata
+- PostgreSQL catalog containing 1,495 novels
+
+## Tech stack
+
+- Backend: Python, Flask, SQLAlchemy
+- Frontend: JavaScript, HTML, CSS
+- Database: PostgreSQL hosted on Neon
+- Deployment: Render
+- Database migrations: Alembic
+- Data collection: Firefox extension and BeautifulSoup parsing
 
 ## Project structure
 
@@ -73,7 +97,8 @@ node tests/ui_checks.js
 
 ## Deployment
 
-The Flask application serves both the frontend and backend.
+The live application runs on Render and connects to PostgreSQL on Neon.
+The frontend and backend are served together by Flask.
 
 Render settings:
 
