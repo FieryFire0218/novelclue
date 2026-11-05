@@ -41,11 +41,22 @@ MANIFEST
 Thumbs.db
 
 # Project specific
-*.csv
-*.json
-!config/novel_pools.json
 data/
 logs/
 temp/
 .cache/
 data/nu_finder_cache/
+
+# Local secrets and database exports
+.env.*
+!.env.example
+backups/
+*.dump
+*.backup
+
+# JavaScript development dependencies
+node_modules/
+
+# Local browser profiles
+firefox-profile/
+browser-profile/
