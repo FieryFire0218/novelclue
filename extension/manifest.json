@@ -1,0 +1,29 @@
+{
+  "manifest_version": 2,
+  "name": "NovelClue Page Collector",
+  "version": "0.2.0",
+  "description": "Collect resumable NovelUpdates metadata queues; pause on verification.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "novelclue-collector@local.invalid"
+    }
+  },
+  "permissions": [
+    "storage",
+    "downloads",
+    "https://www.novelupdates.com/*",
+    "https://novelupdates.com/*",
+    "unlimitedStorage"
+  ],
+  "background": {
+    "scripts": [
+      "core.js",
+      "background.js",
+      "open_collector.js"
+    ],
+    "persistent": true
+  },
+  "browser_action": {
+    "default_title": "NovelClue collector"
+  }
+}
