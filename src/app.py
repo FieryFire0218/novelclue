@@ -1,148 +1,157 @@
-from flask import Flask, render_template, request, jsonify
-from datetime import datetime, UTC
+from datetime import UTC, date, datetime
+from hashlib import sha256
+from secrets import choice
 
+from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
+from answer_pools import LANGUAGES, pool_ids
+from compare import compare_guess, _normalize_rating_5, _round_to_half, _text_key
 from database import SessionLocal
-from models import Novel, DailyAnswer
-from compare import (
-    compare_guess,
-    _normalize_rating_5,
-    _round_to_half
-)
+from models import DailyAnswer, LanguageDailyAnswer, Novel
+from novel_metadata import game_data, snapshot_data
+
+from story_hints import story_hints
 
 app = Flask(__name__)
 
-def get_novels():
-    with SessionLocal() as session:
-        novels = session.scalars(
-            select(Novel).order_by(Novel.id)
-        ).all()
 
-        return [novel.to_dict() for novel in novels]
-
-
-def get_daily_answer():
+def options():
+    lang = request.args.get("language", "mixed")
+    difficulty = request.args.get("difficulty", "normal")
+    if lang not in LANGUAGES or difficulty not in ("normal", "hard"):
+        abort(400, "Invalid language or difficulty.")
     today = datetime.now(UTC).date()
+    try:
+        day = date.fromisoformat(request.args.get("day", today.isoformat()))
+    except ValueError:
+        abort(400, "Invalid puzzle date.")
+    if day > today:
+        abort(400, "Choose today or a saved puzzle date.")
+    return lang, difficulty, day
 
-    with SessionLocal.begin() as session:
 
-        saved_answer = session.get(DailyAnswer, today)
+def archive_query(language):
+    if language == "mixed":
+        return select(DailyAnswer.day)
+    return select(LanguageDailyAnswer.day).where(LanguageDailyAnswer.language == language)
 
-        if saved_answer is not None:
-            return saved_answer.answer_data
 
-        # retrieve stable database IDs in a defined order
-        novel_ids = session.scalars(
-            select(Novel.id).order_by(Novel.id)
-        ).all()
+def daily(session, lang, day):
+    model = DailyAnswer if lang == "mixed" else LanguageDailyAnswer
+    key = {"day": day}
+    if lang != "mixed":
+        key["language"] = lang
+    saved = session.get(model, key)
+    if saved is None:
+        if day != datetime.now(UTC).date():
+            abort(404, "There is no saved puzzle for this language and date.")
+        ids = list(session.scalars(pool_ids(lang, "normal")))
+        if not ids:
+            abort(503, "No active daily answers for this language. Run pool setup.")
+        # rotate through a stable shuffle so adjacent database IDs do not dominate a week.
+        ids.sort(key=lambda n: sha256(f"daily/{lang}/{n}".encode()).digest())
+        novel = session.get(Novel, ids[day.toordinal() % len(ids)])
+        snapshot = dict(game_data(novel), hints=story_hints(novel))
+        statement = pg_insert(model).values(**key, novel_id=novel.id, answer_data=snapshot)
+        session.execute(statement.on_conflict_do_nothing(index_elements=list(key)))
+        saved = session.get(model, key)
+    answer = snapshot_data(saved.answer_data)
+    if "hints" not in answer:
+        answer["hints"] = story_hints(session.get(Novel, saved.novel_id))
+    return answer
 
-        if not novel_ids:
-            return None
 
-        index = today.toordinal() % len(novel_ids)
-        selected_id = novel_ids[index]
+def round_key(lang, novel_id):
+    return sha256(f"hard/{lang}/{novel_id}".encode()).hexdigest()[:24]
 
-        selected_novel = session.get(Novel, selected_id)
 
-        # save the novel's data for this specific day
-        statement = pg_insert(DailyAnswer).values(
-            day=today,
-            novel_id=selected_id,
-            answer_data=selected_novel.to_dict(),
-        )
+def answer_for(session, lang, difficulty, day):
+    if difficulty == "normal":
+        return daily(session, lang, day)
+    token = request.args.get("round")
+    for novel_id in session.scalars(pool_ids(lang, "hard")):
+        if round_key(lang, novel_id) == token:
+            novel = session.get(Novel, novel_id)
+            return dict(game_data(novel), hints=story_hints(novel))
+    abort(404, "This hard round is unavailable. Start a new round.")
 
-        # prevent duplicate entries if two requests arrive simultaneously
-        statement = statement.on_conflict_do_nothing(
-            index_elements=[DailyAnswer.day]
-        )
 
-        session.execute(statement)
+def title_list(lang):
+    query = select(Novel.id, Novel.title).order_by(Novel.title)
+    if lang != "mixed":
+        query = query.where(Novel.original_language == lang)
+    return query
 
-        saved_answer = session.get(DailyAnswer, today)
 
-        return saved_answer.answer_data
+@app.errorhandler(400)
+@app.errorhandler(404)
+@app.errorhandler(503)
+def game_error(error):
+    if request.path in ("/guess", "/answer", "/hint"):
+        return jsonify(error=error.description), error.code
+    return render_template("puzzle_error.html", message=error.description), error.code
 
-@app.route("/")
+
+@app.get("/")
 def index():
-    novels = get_novels()
+    lang, difficulty, day = options()
+    with SessionLocal.begin() as session:
+        if difficulty == "hard" and not request.args.get("round"):
+            ids = list(session.scalars(pool_ids(lang, "hard")))
+            if not ids:
+                abort(503, "No hard answers available for this language.")
+            previous = request.args.get("previous")
+            choices = [n for n in ids if round_key(lang, n) != previous] or ids
+            return redirect(url_for("index", language=lang, difficulty="hard",
+                                    round=round_key(lang, choice(choices))))
+        answer_for(session, lang, difficulty, day)
+        params = dict(language=lang, difficulty=difficulty)
+        if difficulty == "normal":
+            params["day"] = day.isoformat()
+        else:
+            params["round"] = request.args["round"]
+        titles = [row.title for row in session.execute(title_list(lang))]
+        dates = sorted(session.scalars(archive_query(lang)), reverse=True) if difficulty == "normal" else []
+        return render_template("index.html", novels=titles, params=params, lang=lang, difficulty=difficulty,
+                               languages=LANGUAGES, day=day, dates=dates)
 
-    return render_template(
-        "index.html",
-        novels=[novel["title"] for novel in novels]
-    )
 
-@app.route("/guess", methods=["POST"])
+@app.post("/guess")
 def guess():
+    lang, difficulty, day = options()
     data = request.get_json(silent=True)
+    title = data.get("title") if isinstance(data, dict) else None
+    if not isinstance(title, str) or not title.strip():
+        abort(400, "Enter a novel title.")
+    with SessionLocal.begin() as session:
+        candidates = session.execute(title_list(lang))
+        key = _text_key(title)
+        nid = next((row.id for row in candidates if _text_key(row.title) == key), None)
+        if nid is None:
+            abort(400, "Novel not found in this language.")
+        answer = answer_for(session, lang, difficulty, day)
+        return jsonify(compare_guess(game_data(session.get(Novel, nid)), answer))
 
-    if not isinstance(data, dict):
-        return jsonify({"error": "Invalid request"}), 400
 
-    guess_title = data.get("title")
+@app.get("/hint")
+def get_hint():
+    with SessionLocal.begin() as session:
+        return jsonify(hints=answer_for(session, *options())["hints"])
 
-    if not isinstance(guess_title, str):
-        return jsonify({"error": "Invalid title"}), 400
 
-    novels = get_novels()
-
-    guess_novel = next(
-        (
-            novel for novel in novels
-            if novel["title"].lower() == guess_title.lower()
-        ),
-        None
-    )
-
-    if not guess_novel:
-        return jsonify({"error": "Novel not found"}), 400
-
-    answer = get_daily_answer()
-
-    if not answer:
-        return jsonify({
-            "error": "No novels available"
-        }), 503
-
-    feedback = compare_guess(guess_novel, answer)
-
-    return jsonify(feedback)
-
-@app.route("/answer")
+@app.get("/answer")
 def get_answer():
-    novels = get_novels()
-
-    answer = get_daily_answer()
-
-    if not answer:
-        return jsonify({
-            "error": "No novels available"
-        }), 503
-
-    # normalize rating to 0-5 for the UI
-    r_raw = _normalize_rating_5(
-        answer.get("rating")
-    )
-
-    r5 = None
-
-    if r_raw is not None:
-        r5 = max(
-            0.0,
-            min(5.0, _round_to_half(r_raw))
-        )
-
-    return jsonify({
-        "title": answer["title"],
-        "author": answer["author"],
-        "translator": answer["translator"],
-        "genres": answer["genres"],
-        "rating": answer["rating"],
-        "rating5": r5,
-        "chapters": answer["chapters"]
-    })
+    with SessionLocal.begin() as session:
+        answer = answer_for(session, *options())
+    fields = ("title", "author", "genres", "rating", "chapters", "original_chapters_total",
+              "original_chapters_main", "original_chapters_extra", "publication_status", "main_publication_status")
+    result = {k: answer.get(k) for k in fields}
+    rating = _normalize_rating_5(result["rating"])
+    result["rating5"] = None if rating is None else max(0, min(5, _round_to_half(rating)))
+    return jsonify(result)
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)

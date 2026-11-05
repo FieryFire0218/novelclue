@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, false, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,17 +34,17 @@ class Novel(Base):
 
     translator: Mapped[str] = mapped_column(
         String(255),
-        nullable=False,
+        nullable=True,
     )
 
     rating: Mapped[int] = mapped_column(
         Integer,
-        nullable=False,
+        nullable=True,
     )
 
     chapters: Mapped[int] = mapped_column(
         Integer,
-        nullable=False,
+        nullable=True,
     )
 
     genres: Mapped[list] = mapped_column(
@@ -52,11 +52,49 @@ class Novel(Base):
         nullable=False,
     )
 
+    original_language: Mapped[str | None] = mapped_column(
+        String(10),
+        nullable=True,
+    )
+
+    synopsis: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    novelupdates_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        unique=True,
+    )
+
+    novelupdates_rating_count: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    novelupdates_reading_list_count: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    source_metadata: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+
+    daily_eligible: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=false(),
     )
 
     def to_dict(self):
@@ -89,3 +127,12 @@ class DailyAnswer(Base):
         nullable=False,
     )
 
+
+
+class LanguageDailyAnswer(Base):
+    __tablename__ = "language_daily_answers"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    language: Mapped[str] = mapped_column(String(2), primary_key=True)
+    novel_id: Mapped[int] = mapped_column(ForeignKey("novels.id", ondelete="RESTRICT"), nullable=False)
+    answer_data: Mapped[dict] = mapped_column(JSONB, nullable=False)

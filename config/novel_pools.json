@@ -1,0 +1,23 @@
+{
+  "version": "pools-v2",
+  "required_scope_version": "scope-v3",
+  "provisional": true,
+  "normal": {
+    "min_reading_lists": 2500,
+    "min_rating_votes": 100
+  },
+  "broad": {
+    "min_reading_lists": 1000,
+    "min_rating_votes": 50
+  },
+  "verified_distinct_pairs": [
+    {
+      "source_ids": [782, 8111],
+      "reason": "Manually verified on NovelUpdates: unrelated novels with different Chinese titles, 永生 and 长生不死, sharing the English alias Immortality."
+    },
+    {
+      "source_ids": [6025, 6070],
+      "reason": "Manually verified on NovelUpdates: Chronicles of Gu Hai is a separate prequel to Everlasting Immortal Firmament."
+    }
+  ]
+}

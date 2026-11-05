@@ -43,7 +43,9 @@ Thumbs.db
 # Project specific
 *.csv
 *.json
+!config/novel_pools.json
 data/
 logs/
 temp/
 .cache/
+data/nu_finder_cache/

@@ -247,3 +247,253 @@ button:disabled {
     width: 100%;
   }
 }
+
+/* new game layout */
+:root {
+  --text: #18252c;
+  --muted: #63747e;
+  --primary: #087f73;
+  --primary-dark: #075e56;
+  --success: #116b48;
+  --warning: #936015;
+  --error: #aa3434;
+}
+
+body {
+  display: block;
+  padding: 36px 20px;
+  background: #f3f6f7;
+  color: var(--text);
+}
+
+.app-shell {
+  width: min(100%, 1100px);
+  margin: 0 auto;
+}
+
+.topbar {
+  margin-bottom: 24px;
+}
+
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #ddf2eb;
+  box-shadow: none;
+  font-size: 1.5rem;
+}
+
+h1 {
+  color: var(--text);
+  font-size: 2rem;
+}
+
+.panel {
+  padding: 28px;
+  border: 1px solid #dce4e8;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 6px 24px rgb(24 37 44 / 4%);
+  backdrop-filter: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.panel > .actions:first-child {
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e6ecef;
+}
+
+.actions label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+select,
+input {
+  min-height: 44px;
+  border: 1px solid #ccd8de;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+select {
+  min-width: 150px;
+}
+
+.guess-form {
+  margin-top: 24px;
+  flex-wrap: nowrap;
+}
+
+.guess-form input {
+  min-width: 0;
+  flex: 1;
+}
+
+button {
+  min-height: 44px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  box-shadow: none;
+}
+
+.primary-btn {
+  background: var(--primary);
+  box-shadow: none;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.secondary-btn {
+  background: #edf2f4;
+  color: #344b57;
+}
+
+.danger-btn {
+  margin-left: auto;
+  background: #fff;
+  color: var(--error);
+  border: 1px solid #ead4d4;
+}
+
+button:hover:not(:disabled) {
+  transform: none;
+}
+
+a {
+  color: var(--primary-dark);
+  text-underline-offset: 3px;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible,
+.guess-table-scroll:focus-visible {
+  outline: 3px solid #82cfc0;
+  outline-offset: 3px;
+}
+
+#hints:empty {
+  display: none;
+}
+
+#hints {
+  padding: 16px 20px 16px 38px;
+  border-radius: 10px;
+  background: #f0f7f4;
+  line-height: 1.6;
+}
+
+#hints li + li {
+  margin-top: 8px;
+}
+
+.results {
+  display: block;
+  min-width: 0;
+}
+
+.result-card {
+  margin-bottom: 16px;
+  border-radius: 10px;
+}
+
+.guess-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid #dce4e8;
+  border-radius: 10px;
+}
+
+.guess-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.guess-table th,
+.guess-table td {
+  padding: 14px;
+  vertical-align: top;
+  border-bottom: 1px solid #e6ecef;
+  overflow-wrap: anywhere;
+}
+
+.guess-table thead th {
+  background: #f4f7f8;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.guess-table tbody th {
+  width: 22%;
+  min-width: 180px;
+  font-weight: 600;
+}
+
+.guess-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.guess-table .clue-match {
+  color: #116b48;
+  background: #edf8f1;
+}
+
+.guess-table .clue-unknown {
+  color: var(--muted);
+  background: #f7f9fa;
+}
+
+@media (max-width: 560px) {
+  body {
+    padding: 20px 12px;
+  }
+
+  .panel {
+    padding: 18px 14px;
+  }
+
+  .topbar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .guess-form {
+    flex-direction: row;
+  }
+
+  .primary-btn,
+  .secondary-btn,
+  .danger-btn {
+    width: auto;
+  }
+
+  .guess-form button {
+    padding-inline: 14px;
+  }
+}

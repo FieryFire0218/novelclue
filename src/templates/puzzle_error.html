@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NovelClue</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="panel">
+      <h1>NovelClue</h1>
+      <p>{{ message }}</p>
+      <a href="{{ url_for('index') }}">Open the mixed daily puzzle</a>
+    </section>
+  </main>
+</body>
+</html>
