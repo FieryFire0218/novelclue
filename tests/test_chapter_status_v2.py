@@ -61,7 +61,26 @@ class CaptureTests(unittest.TestCase):
     def test_conflict_and_ambiguous_units(self):
         self.assertIsNone(parse_chapter_status('1443 Chapters (Ongoing):\n-Part 1 "The Birth of a Hero": 776 Chapters + 23 Extra Chapters (Completed)\n-Part 2 "The Laws of the Hunt": 643 Chapters (Ongoing)')["original_chapters_total"])
         self.assertIsNone(parse_chapter_status('1442 Chapters (Ongoing):\n-Part 1 "The Birth of a Hero": 776 Chapters + 23 Side Stories (Completed)\n-Part 2 "The Laws of the Hunt": 643 Chapters (Ongoing)')["original_chapters_total"])
-        self.assertIsNone(parse_chapter_status('378 Chapters (Completed):\n— 348 Main Story Chapters (Completed)\n— 4 Extra Chapters (Completed)\n— 1 Afterword (Completed)\n— 25 Side Stories (Completed)')["original_chapters_total"])
-        self.assertEqual(parse_chapter_status('378 Chapters (Completed):\n— 348 Main Story Chapters (Completed)\n— 4 Extra Chapters (Completed)\n— 1 Afterword (Completed)\n— 25 Side Story Chapters (Completed)\n— 25 Side Story Chapters (Completed)')["original_chapters_total"], 378)
+        self.assertEqual(
+            parse_chapter_status(
+                '378 Chapters (Completed):\n'
+                '— 348 Main Story Chapters (Completed)\n'
+                '— 4 Extra Chapters (Completed)\n'
+                '— 1 Afterword (Completed)\n'
+                '— 25 Side Stories (Completed)'
+            )["original_chapters_total"],
+            378
+        )
+
+        self.assertIsNone(
+            parse_chapter_status(
+                '378 Chapters (Completed):\n'
+                '— 348 Main Story Chapters (Completed)\n'
+                '— 4 Extra Chapters (Completed)\n'
+                '— 1 Afterword (Completed)\n'
+                '— 25 Side Story Chapters (Completed)\n'
+                '— 25 Side Story Chapters (Completed)'
+            )["original_chapters_total"]
+        )
 
 if __name__ == "__main__": unittest.main()

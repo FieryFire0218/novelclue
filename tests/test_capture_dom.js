@@ -9,7 +9,23 @@ const html=`<title>Example</title><link rel="canonical" href="https://www.novelu
 <form><input value="SECRET_TOKEN"></form><p>Second paragraph.</p><div class="editmsg">Private edit controls</div></div>
 <span class="uvotes">(4.3 / 5.0, 100 votes)</span><b class="rlist">2,500</b>
 <div id="editstatus">149 Chapters + 5 Extras (Completed)</div>`;
-function capture(text){const dom=new JSDOM(text,{url:'https://www.novelupdates.com/series/example/',runScripts:'outside-only'});const result=dom.window.eval(code);dom.window.close();return result;}
+function capture(text) {
+  const dom = new JSDOM(text, {
+    url: 'https://www.novelupdates.com/series/example/',
+    runScripts: 'outside-only'
+  });
+
+  Object.defineProperty(dom.window.document, 'readyState', {
+    value: 'complete',
+    configurable: true
+  });
+
+  try {
+    return dom.window.eval(code);
+  } finally {
+    dom.window.close();
+  }
+}
 const p=capture(html);assert.equal(p.kind,'page');assert.equal(p.source_novel_id,4052);
 for(const secret of ['SECRET','onclick','<script','<form','Private edit','PRIVATE ACCOUNT'])assert.ok(!p.html.includes(secret),secret);
 assert.ok(p.html.includes('First paragraph.'));assert.ok(p.html.includes('value="4052"'));

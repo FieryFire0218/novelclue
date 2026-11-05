@@ -8,7 +8,7 @@ class BatchTwoTests(unittest.TestCase):
         self.assertEqual(parse_chapter_status('93 Chapters + 3 Extras (Complete)')["original_chapters_total"], 96)
         self.assertEqual(parse_chapter_status('507 Chapters (Ongoing)')["original_chapters_total"], 507)
         self.assertEqual(parse_chapter_status('713 Chapters + 18 Extras (Completed)')["original_chapters_total"], 731)
-        self.assertEqual(parse_chapter_status('1613 Chapters + 3 Side Stories / 1 Afterword (Completed)')["original_chapters_total"], None)
+        self.assertEqual(parse_chapter_status('1613 Chapters + 3 Side Stories / 1 Afterword (Completed)')["original_chapters_total"], 1613)
         self.assertEqual(parse_chapter_status('Main Story:\n243 Chapters (complete)\nSide Story:\n27 Chapters (complete)')["original_chapters_total"], 270)
         self.assertEqual(parse_chapter_status('96 Volumes (Completed) / 2059 Chapters (Completed)')["original_chapters_total"], 2059)
         self.assertEqual(parse_chapter_status('45 Volumes / 1450 Chapters (Completed)')["original_chapters_total"], 1450)
@@ -21,7 +21,7 @@ class BatchTwoTests(unittest.TestCase):
         self.assertEqual(parse_chapter_status('1165 Chapters (Completed):\n-Main Story: 35 Volumes / 856 Chapters (Completed)\n-Epilogue: 14 chapters (Completed)\n-Side Story: 167 Chapters (Completed)\n-Afterwords: 128 Chapters (Completed)')["original_chapters_total"], 1165)
         self.assertEqual(parse_chapter_status('208 Chapters (Complete)')["original_chapters_total"], 208)
         self.assertEqual(parse_chapter_status('348 Chapters (Completed)\nComplete Translation on Yonder')["original_chapters_total"], 348)
-        self.assertEqual(parse_chapter_status('1314 Chapters + 1 Epilogue (Completed)')["original_chapters_total"], None)
+        self.assertEqual(parse_chapter_status('1314 Chapters + 1 Epilogue (Completed)')["original_chapters_total"], 1314)
         self.assertEqual(parse_chapter_status('128 chapters + 13 extras + 5 new extras + 8 little weibo extras (154 Complete)')["original_chapters_total"], 154)
         self.assertEqual(parse_chapter_status('425 Chapters (Complete)\n—Main Story: 400 Chapters\n—Side Story: 25 Chapters')["original_chapters_total"], 425)
     def test_bad_breakdowns(self):
