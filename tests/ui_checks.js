@@ -5,10 +5,57 @@ const html = fs.readFileSync(require('path').join(__dirname,'../src/templates/in
 const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const elements = new Map();
 function element(id) {
- if (!elements.has(id)) elements.set(id,{value:'',disabled:false,innerHTML:'',textContent:'',className:'',listeners:{},focus(){},addEventListener(k,f){this.listeners[k]=f;},insertAdjacentHTML(_,s){this.innerHTML=s+this.innerHTML;}});
+ if (!elements.has(id)) {
+  elements.set(id, {
+    value: '',
+    disabled: false,
+    innerHTML: '',
+    textContent: '',
+    className: '',
+    listeners: {},
+    children: [],
+    replaceChildren() {
+      this.children = [];
+      this.innerHTML = '';
+    },
+    focus() {},
+    addEventListener(k, f) {
+      this.listeners[k] = f;
+    },
+    insertAdjacentHTML(_, s) {
+      this.innerHTML = s + this.innerHTML;
+    }
+  });
+ }
  return elements.get(id);
 }
-const ctx=vm.createContext({document:{getElementById:element},fetch:async()=>({ok:true,json:async()=>({title:'<img src=x onerror=alert(1)>',author:null,translator:null,chapters:null,rating5:null,genres:[]})})});
+const ctx = vm.createContext({
+  URL,
+  URLSearchParams,
+  window: {
+    location: {
+      origin: 'http://localhost',
+      search: ''
+    }
+  },
+  document: {
+    getElementById: element,
+    querySelector() {
+      return null;
+    }
+  },
+  fetch: async () => ({
+    ok: true,
+    json: async () => ({
+      title: '<img src=x onerror=alert(1)>',
+      author: null,
+      translator: null,
+      chapters: null,
+      rating5: null,
+      genres: []
+    })
+  })
+});
 vm.runInContext(script,ctx);
 assert.equal(vm.runInContext('renderStars(0)',ctx),'0 stars');
 assert.equal(vm.runInContext('renderStars(null)',ctx),'Unknown');

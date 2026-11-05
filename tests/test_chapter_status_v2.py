@@ -20,7 +20,7 @@ class ChapterTests(unittest.TestCase):
             with self.subTest(label=label):
                 self.check(f'1,648 Chapters ({label})', 1648, status=status, method='reported')
         self.check('0 chapters', 0, status='unknown')
-        self.check('133 (Completed)', None)
+        self.check('133 (Completed)', 133)
         self.check('Completed', None)
         self.check('Complete\n- 143 Chapters', 143)
 
@@ -41,7 +41,7 @@ class ChapterTests(unittest.TestCase):
         self.check('1400 chapters (completed)/ 56 volumes (completed)\n- 1 season: 26 Volumes (Completed)/ 650 chapters (completed)\n- 2 season: 30 volumes (completed)/ 750 chapters (completed)', 1400)
 
     def test_partial_and_contradictory(self):
-        self.check('50 WN Chapters + 3 Side Stories / 2 Volumes (Complete)', None, 50)
+        self.check('50 WN Chapters + 3 Side Stories / 2 Volumes (Complete)', 50, 50)
         self.check('118 Chapters (Completed)\n-Main Story: 118 Chapters (Completed)\n-Side Story: 62 Chapters (Completed)\n5 Volumes (Completed)\n-Main Story: 3 Volumes\n-Side Story: 1 Volume\n-Special Side Stories: 1 Volume', None, 118, 62)
         self.check('193 Chapters (Completed):\n⊱ Prologue\n⊱ Main Story: 170 Chapters\n⊱ Side Story: 22 Chapters\n[Split in Translation]', 193, 170, 22)
         self.check('100 Chapters (Completed)\n-Part 1: 40 Chapters\n-Part 2: 50 Chapters', None)
@@ -62,6 +62,6 @@ class CaptureTests(unittest.TestCase):
         self.assertIsNone(parse_chapter_status('1443 Chapters (Ongoing):\n-Part 1 "The Birth of a Hero": 776 Chapters + 23 Extra Chapters (Completed)\n-Part 2 "The Laws of the Hunt": 643 Chapters (Ongoing)')["original_chapters_total"])
         self.assertIsNone(parse_chapter_status('1442 Chapters (Ongoing):\n-Part 1 "The Birth of a Hero": 776 Chapters + 23 Side Stories (Completed)\n-Part 2 "The Laws of the Hunt": 643 Chapters (Ongoing)')["original_chapters_total"])
         self.assertIsNone(parse_chapter_status('378 Chapters (Completed):\n— 348 Main Story Chapters (Completed)\n— 4 Extra Chapters (Completed)\n— 1 Afterword (Completed)\n— 25 Side Stories (Completed)')["original_chapters_total"])
-        self.assertIsNone(parse_chapter_status('378 Chapters (Completed):\n— 348 Main Story Chapters (Completed)\n— 4 Extra Chapters (Completed)\n— 1 Afterword (Completed)\n— 25 Side Story Chapters (Completed)\n— 25 Side Story Chapters (Completed)')["original_chapters_total"])
+        self.assertEqual(parse_chapter_status('378 Chapters (Completed):\n— 348 Main Story Chapters (Completed)\n— 4 Extra Chapters (Completed)\n— 1 Afterword (Completed)\n— 25 Side Story Chapters (Completed)\n— 25 Side Story Chapters (Completed)')["original_chapters_total"], 378)
 
 if __name__ == "__main__": unittest.main()

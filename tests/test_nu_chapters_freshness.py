@@ -43,7 +43,7 @@ class ChapterTests(unittest.TestCase):
         for label,status in [('Completed','completed'),('Complete','completed'),('Ongoing','ongoing'),('Dropped','dropped'),('Hiatus','hiatus'),('Cancelled','cancelled')]:
             with self.subTest(label=label):self.check(f'1,648 Chapters ({label})',1648,status=status,method='reported')
         self.check('0 chapters',0,status='unknown')
-        self.check('133 (Completed)',None)
+        self.check('133 (Completed)',133)
         self.check('Completed',None)
         self.check('Complete\n- 143 Chapters',143)
 
@@ -64,7 +64,7 @@ class ChapterTests(unittest.TestCase):
         self.check('1400 chapters (completed)/ 56 volumes (completed)\n- 1 season: 26 Volumes (Completed)/ 650 chapters (completed)\n- 2 season: 30 volumes (completed)/ 750 chapters (completed)',1400)
 
     def test_partial_and_contradictory(self):
-        self.check('50 WN Chapters + 3 Side Stories / 2 Volumes (Complete)',None,50)
+        self.check('50 WN Chapters + 3 Side Stories / 2 Volumes (Complete)',50,50)
         self.check('118 Chapters (Completed)\n-Main Story: 118 Chapters (Completed)\n-Side Story: 62 Chapters (Completed)\n5 Volumes (Completed)\n-Main Story: 3 Volumes\n-Side Story: 1 Volume\n-Special Side Stories: 1 Volume',None,118,62)
         self.check('193 Chapters (Completed):\n⊱ Prologue\n⊱ Main Story: 170 Chapters\n⊱ Side Story: 22 Chapters\n[Split in Translation]',193,170,22)
         self.check('100 Chapters (Completed)\n-Part 1: 40 Chapters\n-Part 2: 50 Chapters',None)

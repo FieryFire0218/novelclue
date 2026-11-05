@@ -82,6 +82,14 @@
 
     let hasGivenUp = false;
     let hasWon = false;
+    let requestPending = false;
+
+    function setRequestPending(value) {
+      requestPending = value;
+      guessBtn.disabled = value || hasWon || hasGivenUp;
+      giveUpBtn.disabled = value || hasWon || hasGivenUp;
+      resetBtn.disabled = value;
+    }
 
     function setStatus(message, tone = "info") {
       statusEl.textContent = message;
@@ -264,6 +272,7 @@
     }
 
     function resetGame() {
+      if (requestPending) return;
       hintRequest++;
       hintList.replaceChildren();
       hintBtn.textContent = "Show hint";
@@ -280,6 +289,7 @@
 
     guessForm.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (requestPending) return;
 
       if (hasGivenUp || hasWon) {
         setStatus("The game is over. Reset to play again.", "error");
@@ -293,6 +303,7 @@
         return;
       }
 
+      setRequestPending(true);
       try {
         const res = await fetch(gameUrl("/guess"), {
           method: "POST",
@@ -327,14 +338,19 @@
       } catch (error) {
         setStatus("Something went wrong while checking your guess.", "error");
       }
+      finally {
+        setRequestPending(false);
+      }
     });
 
     async function revealAnswer() {
+      if (requestPending) return;
       if (hasGivenUp || hasWon) {
         setStatus("This round is already finished.", "error");
         return;
       }
 
+      setRequestPending(true);
       try {
         const res = await fetch(gameUrl("/answer"));
         const ans = await res.json();
@@ -363,6 +379,9 @@
         lockGame();
       } catch (error) {
         setStatus("Could not load the answer right now.", "error");
+      }
+      finally {
+        setRequestPending(false);
       }
     }
 

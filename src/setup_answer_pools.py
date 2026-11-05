@@ -1,7 +1,7 @@
 import argparse
 from sqlalchemy import text, update
 from answer_pools import pool_ids
-from models import LanguageDailyAnswer, Novel
+from models import Novel
 from database import SessionLocal
 
 
@@ -23,7 +23,6 @@ def main():
             activate.extend(set(normal) - active)
             print(f"{lang}: normal {len(normal)}, hard {len(hard)}, already active {len(active)}")
         if args.apply:
-            LanguageDailyAnswer.__table__.create(session.connection(), checkfirst=True)
             if activate:
                 session.execute(update(Novel).where(Novel.id.in_(activate)).values(daily_eligible=True))
     print(f"{'Activated' if args.apply else 'Would activate'} {len(activate)} additional daily answers.")

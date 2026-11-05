@@ -167,6 +167,12 @@ def _parse_v3(raw):
             out.update(original_chapters_total=main+extra, original_chapters_main=main,
                        original_chapters_extra=extra, publication_status=STATUSES[inline[4]],
                        main_publication_status=STATUSES[inline[4]], chapter_count_method='reported', chapter_notes=[])
+        else:
+            out['original_chapters_total'] = None
+            out['chapter_count_method'] = 'unresolved'
+            out['chapter_notes'].append(
+                'Reported total disagrees with labeled chapter components.'
+            )
         return out
     labels = r'(?:main story|main|side stories|side story|bonus story|prologue|epilogue|afterwords?|extras?)'
     components = {}
@@ -199,6 +205,11 @@ def _parse_v3(raw):
             return out
         label = {'main':'main story','side stories':'side story','afterwords':'afterword','extras':'extra'}.get(label,label)
         if label in components:
+            out['original_chapters_total'] = None
+            out['chapter_count_method'] = 'unresolved'
+            out['chapter_notes'].append(
+                'Conflicting duplicate chapter component labels.'
+            )
             return out
         components[label] = count
         statuses[label] = {STATUSES[v] for v in re.findall(STATUS_RE, raw_line)}

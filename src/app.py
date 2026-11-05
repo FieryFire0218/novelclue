@@ -3,7 +3,8 @@ from hashlib import sha256
 from secrets import choice
 
 from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from answer_pools import LANGUAGES, pool_ids
@@ -15,6 +16,18 @@ from novel_metadata import game_data, snapshot_data
 from story_hints import story_hints
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
+
+
+@app.get("/health")
+def health():
+    try:
+        with SessionLocal() as session:
+            session.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        app.logger.exception("Database health check failed")
+        return jsonify(status="unavailable"), 503
+    return jsonify(status="ok")
 
 
 def options():
@@ -87,6 +100,7 @@ def title_list(lang):
 
 @app.errorhandler(400)
 @app.errorhandler(404)
+@app.errorhandler(413)
 @app.errorhandler(503)
 def game_error(error):
     if request.path in ("/guess", "/answer", "/hint"):

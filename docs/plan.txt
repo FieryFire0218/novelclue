@@ -1,0 +1,3 @@
+1. make website ui look better (rn can keep spamming give up
+and guess and it'll repeat the messages)
+2. get it actually running on a free website
