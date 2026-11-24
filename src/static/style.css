@@ -497,3 +497,64 @@ a:focus-visible,
     padding-inline: 14px;
   }
 }
+
+.novel-picker {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.guess-form .novel-picker input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+.novel-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  max-height: 240px;
+  max-height: min(240px, 40dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  border: 1px solid #bccbd2;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 15%);
+}
+
+.novel-suggestions[hidden] {
+  display: none;
+}
+
+.guess-form .novel-suggestion {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid #edf1f3;
+  border-radius: 0;
+  background: #fff;
+  color: #18252c;
+  text-align: left;
+  font: inherit;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.novel-suggestion:hover,
+.novel-suggestion:focus-visible {
+  background: #e9f5f2;
+}
+
+.novel-search-note {
+  margin: 0;
+  padding: 12px 14px;
+  color: #63747e;
+}
