@@ -38,9 +38,9 @@
     }
 
     const query = normalize(input.value);
-    const matches = titles
-      .filter(title => !query || normalize(title).includes(query))
-      .slice(0, 20);
+    const matches = titles.filter(
+      title => !query || normalize(title).includes(query)
+    );
 
     suggestions.replaceChildren();
 
